@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
 
-export const metadata = { title: "Sign in · Mandate" };
+export const metadata = {
+  title: "Sign in · Mandate",
+  description:
+    "Sign in to Mandate — your AI CIO. Stress-tests every investment thesis against your firm's mandate before IC.",
+  alternates: { canonical: "/login" },
+};
 
 async function loginAction(formData: FormData) {
   "use server";

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "tsx src/lib/db/migrate.ts && tsx src/lib/db/seed.ts && next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/lib/db/migrate.ts",
@@ -36,6 +36,7 @@
     "streamdown": "^2.5.0",
     "tailwind-merge": "^3.5.0",
     "tiptap-markdown": "^0.9.0",
+    "tsx": "^4.21.0",
     "valyu-js": "^2.7.14",
     "zod": "^4.4.3"
   },
@@ -50,7 +51,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

@@ -277,13 +277,13 @@ function Header({
   const versionLabel = totalVersions === 0 ? "Unsaved" : `v${totalVersions}`;
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-medium uppercase tracking-wider text-text-subtle">
             Firm-wide policy
           </div>
           <div className="mt-1 flex flex-wrap items-baseline gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-text">
+            <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
               House View
             </h1>
             <Badge tone={totalVersions === 0 ? "warning" : "neutral"}>
@@ -301,7 +301,7 @@ function Header({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {mode === "read" ? (
             <>
               <Button

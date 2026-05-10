@@ -168,8 +168,8 @@ export default async function FundDetailPage({
                 {holdings.length}
               </Badge>
             </SectionTitle>
-            <div className="overflow-hidden rounded-lg border border-border bg-surface">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-surface-2 text-[10px] font-medium uppercase tracking-wider text-text-subtle">
                   <tr>
                     <th className="px-3 py-2.5 text-left">Ticker</th>

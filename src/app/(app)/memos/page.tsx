@@ -48,7 +48,6 @@ export default async function MemosPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Theses under stress-test"
         title={heading}
         description={`${rows.length} ${rows.length === 1 ? "memo" : "memos"} — Mandate has reviewed every submitted thesis against your House View.`}
         actions={!session || isFm ? <NewMemoButton /> : null}

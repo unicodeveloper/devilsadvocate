@@ -144,7 +144,7 @@ export default async function GroupDetailPage({
         <GatedForm
           action={addMemberAction}
           reason="Sign in to add a member."
-          className="flex items-center gap-2 border-t border-border bg-surface-2 px-4 py-3"
+          className="flex flex-col items-stretch gap-2 border-t border-border bg-surface-2 px-4 py-3 sm:flex-row sm:items-center"
         >
           <input type="hidden" name="groupId" value={group.id} />
           <input
@@ -174,7 +174,7 @@ export default async function GroupDetailPage({
         <GatedForm
           action={deleteGroupAction}
           reason="Sign in to delete this group."
-          className="flex items-center justify-between gap-3"
+          className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <p className="text-xs text-text-muted">
             Deleting this group is permanent. Memos and funds are unaffected.

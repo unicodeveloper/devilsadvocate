@@ -63,7 +63,7 @@ export function ExposureForm({
       </div>
 
       {type === "ticker" ? (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             list="known-tickers"
             value={q}
@@ -86,7 +86,7 @@ export function ExposureForm({
       ) : null}
 
       {type === "sector" ? (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
@@ -109,7 +109,7 @@ export function ExposureForm({
       ) : null}
 
       {type === "group" ? (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}

@@ -269,8 +269,8 @@ function ResultPanel({
 
 function DataTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
-      <table className="w-full text-sm">{children}</table>
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <table className="w-full min-w-[640px] text-sm">{children}</table>
     </div>
   );
 }

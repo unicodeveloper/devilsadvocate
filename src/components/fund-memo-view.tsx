@@ -125,8 +125,8 @@ function PortfolioComposition({ memo }: { memo: FundSynthesizedMemo }) {
     <Section title="Portfolio Composition">
       <p className="text-sm font-medium text-text">{headline}</p>
       {sectorTilts.length > 0 ? (
-        <div className="mt-4 overflow-hidden rounded-md border border-border bg-surface-2">
-          <table className="w-full text-sm">
+        <div className="mt-4 overflow-x-auto rounded-md border border-border bg-surface-2">
+          <table className="w-full min-w-[480px] text-sm">
             <thead className="bg-surface-3 text-left text-[10px] font-medium uppercase tracking-wider text-text-subtle">
               <tr>
                 <th className="px-3 py-2">Sector</th>
@@ -218,8 +218,8 @@ function RuleEvaluationRow({
 
 function ViolatingHoldingsTable({ rows }: { rows: HoldingRef[] }) {
   return (
-    <div className="mt-3 overflow-hidden rounded-md border border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
-      <table className="w-full text-xs">
+    <div className="mt-3 overflow-x-auto rounded-md border border-[color-mix(in_oklab,var(--danger)_30%,transparent)]">
+      <table className="w-full min-w-[560px] text-xs">
         <thead className="bg-danger-soft text-left text-[10px] font-medium uppercase tracking-wider text-danger">
           <tr>
             <th className="px-3 py-1.5">Ticker</th>

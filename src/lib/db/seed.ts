@@ -3,6 +3,7 @@ import { db } from "./index";
 import { criticRules, fundHoldings, funds, users } from "./schema";
 import { and, eq } from "drizzle-orm";
 import { seedHouseViewIfEmpty } from "../house-view";
+import { seedDemoMemosIfEmpty, DEMO_MEMO_COUNT } from "./seed-demo-memos";
 import { BUILTIN_RULES } from "../critic/rules/builtin";
 
 type SeedHolding = {
@@ -261,8 +262,14 @@ async function seed() {
 
   if (seedUserId) {
     await seedFunds(seedUserId);
+    const demoResult = await seedDemoMemosIfEmpty(seedUserId);
+    console.log(
+      demoResult === "seeded"
+        ? `seeded ${DEMO_MEMO_COUNT} demo memos with stress-test data`
+        : "skip demo memos seed (already exist)",
+    );
   } else {
-    console.log("skip funds seed (no seed user resolved)");
+    console.log("skip funds + demo memos seed (no seed user resolved)");
   }
 }
 

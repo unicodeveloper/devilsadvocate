@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./index";
 import { criticRules, fundHoldings, funds, users } from "./schema";
 import { and, eq } from "drizzle-orm";
-import { readHouseView } from "../house-view";
+import { seedHouseViewIfEmpty } from "../house-view";
 import { BUILTIN_RULES } from "../critic/rules/builtin";
 
 type SeedHolding = {
@@ -223,10 +223,14 @@ async function seed() {
     console.log(`seeded ${u.role}: ${u.email}`);
   }
 
-  await readHouseView();
-  console.log(
-    `bootstrapped house view at ${process.env.HOUSE_VIEW_PATH ?? "./data/house-view.md"}`,
-  );
+  if (seedUserId) {
+    const result = await seedHouseViewIfEmpty(seedUserId);
+    console.log(
+      result === "seeded"
+        ? "seeded initial house view (v1)"
+        : "skip house view seed (versions exist)",
+    );
+  }
 
   // Seed built-in Critic rules. Slugs are unique; existing rows are left
   // alone so user toggles (enabled/disabled) survive re-seeding.

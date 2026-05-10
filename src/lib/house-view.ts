@@ -1,11 +1,12 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
 import { desc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { houseViewVersions, users } from "./db/schema";
 
-const HOUSE_VIEW_PATH = process.env.HOUSE_VIEW_PATH ?? "./data/house-view.md";
-
+/**
+ * Default content used to seed the very first house-view version on a fresh
+ * database. After that, the DB is the only source of truth — every UI save
+ * inserts a new row and the latest row is "the current house view".
+ */
 const PLACEHOLDER = `# House View
 
 The firm-wide one-pager. Edited by the Fund Manager. Mandate treats this as
@@ -36,26 +37,42 @@ the engine flags the divergence rather than overriding.
 - No leverage above 1.2x at the fund level.
 `;
 
+/**
+ * Returns the live house view. Always reads the latest version from the
+ * `house_view_versions` table; falls back to the placeholder only if the
+ * table is completely empty (which should not happen after seeding).
+ */
 export async function readHouseView(): Promise<string> {
-  try {
-    return await readFile(HOUSE_VIEW_PATH, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      await mkdir(dirname(HOUSE_VIEW_PATH), { recursive: true });
-      await writeFile(HOUSE_VIEW_PATH, PLACEHOLDER, "utf8");
-      return PLACEHOLDER;
-    }
-    throw err;
-  }
+  const latest = await getLatestHouseViewVersion();
+  return latest?.content ?? PLACEHOLDER;
 }
 
+/**
+ * Persists a new version of the house view. The DB is append-only — every
+ * save creates an immutable snapshot row, and the most recent row is the
+ * effective "current" version.
+ */
 export async function writeHouseView(
   content: string,
   updatedByUserId: string,
 ): Promise<void> {
-  await mkdir(dirname(HOUSE_VIEW_PATH), { recursive: true });
-  await writeFile(HOUSE_VIEW_PATH, content, "utf8");
   await db.insert(houseViewVersions).values({ content, updatedByUserId });
+}
+
+/**
+ * Seeds the very first version when no row exists. Idempotent — safe to call
+ * on every boot. Used by the seed script after the seed user is created.
+ */
+export async function seedHouseViewIfEmpty(
+  userId: string,
+): Promise<"seeded" | "skipped"> {
+  const latest = await getLatestHouseViewVersion();
+  if (latest) return "skipped";
+  await db.insert(houseViewVersions).values({
+    content: PLACEHOLDER,
+    updatedByUserId: userId,
+  });
+  return "seeded";
 }
 
 export async function getLatestHouseViewVersion() {

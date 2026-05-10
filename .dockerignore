@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+!.env.example
+data
+test-results
+playwright-report
+docs
+README.md
+AGENTS.md

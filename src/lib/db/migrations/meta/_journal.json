@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1778234508423,
+      "tag": "0000_cuddly_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778255650596,
+      "tag": "0001_bored_forgotten_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778256464251,
+      "tag": "0002_boring_thunderbolts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1778257759952,
+      "tag": "0003_fair_chimera",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778259386299,
+      "tag": "0004_whole_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1778426035281,
+      "tag": "0005_wandering_sabretooth",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1778435000000,
+      "tag": "0006_rename_inr_to_native",
+      "breakpoints": true
+    }
+  ]
+}

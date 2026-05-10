@@ -1,0 +1,238 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Tailwind v4: switch the `dark:` variant from OS preference to a
+   class-based selector so our toggle actually drives every existing
+   `dark:bg-*` / `dark:text-*` utility in the app. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ----------------------------------------------------------------
+   Tokens — dark is the default. Light mode is opt-in: when the
+   `dark` class is absent from <html>, the light overrides below
+   take effect.
+---------------------------------------------------------------- */
+
+:root {
+  /* Surfaces */
+  --bg: #08090b;
+  --surface: #101114;
+  --surface-2: #15171b;
+  --surface-3: #1c1f24;
+  --overlay: rgba(0, 0, 0, 0.66);
+
+  /* Text */
+  --text: #e7e9ee;
+  --text-muted: #9aa0aa;
+  --text-subtle: #5d626c;
+
+  /* Borders */
+  --border: #1f2127;
+  --border-strong: #2c2f37;
+
+  /* Brand — Paper White (warm-tinted). The brand IS contrast on OLED.
+     Status colors carry chromatic info; the accent is sophistication. */
+  --accent: #f5f2ea;
+  --accent-hover: #ffffff;
+  --accent-fg: #0a0c10;
+  --accent-soft: rgba(245, 242, 234, 0.08);
+  --accent-ring: rgba(245, 242, 234, 0.32);
+  --accent-glow: rgba(245, 242, 234, 0.22);
+  /* Cinematic bloom — twin-layer shadow makes the white line/button look
+     like it's catching light, not pasted on. */
+  --accent-bloom:
+    0 0 14px rgba(245, 242, 234, 0.55),
+    0 0 36px rgba(245, 242, 234, 0.2);
+  --accent-press: 0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* Status */
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.12);
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.13);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.13);
+  --info: #06b6d4;
+  --info-soft: rgba(6, 182, 212, 0.13);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  /* Shadows (dark-tuned) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
+  --shadow-ring: 0 0 0 4px var(--accent-ring);
+}
+
+html:not(.dark) {
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --surface-2: #f4f4f6;
+  --surface-3: #e9eaee;
+  --overlay: rgba(15, 17, 21, 0.4);
+
+  --text: #0a0c10;
+  --text-muted: #52555c;
+  --text-subtle: #a0a3aa;
+
+  --border: #e4e5e9;
+  --border-strong: #cfd1d6;
+
+  /* Light mode inverts: brand color is now near-black on white surfaces.
+     Same "contrast IS the brand" philosophy, just flipped. */
+  --accent: #0a0c10;
+  --accent-hover: #1f2127;
+  --accent-fg: #f5f2ea;
+  --accent-soft: rgba(10, 12, 16, 0.06);
+  --accent-ring: rgba(10, 12, 16, 0.18);
+  --accent-glow: rgba(10, 12, 16, 0.14);
+  --accent-bloom:
+    0 1px 2px rgba(10, 12, 16, 0.08),
+    0 6px 24px rgba(10, 12, 16, 0.12);
+  --accent-press: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.1);
+  --warning: #d97706;
+  --warning-soft: rgba(217, 119, 6, 0.12);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --info: #0891b2;
+  --info-soft: rgba(8, 145, 178, 0.1);
+
+  --shadow-sm: 0 1px 2px rgba(15, 17, 21, 0.06);
+  --shadow: 0 8px 24px rgba(15, 17, 21, 0.08);
+  --shadow-lg: 0 24px 64px rgba(15, 17, 21, 0.14);
+}
+
+/* ----------------------------------------------------------------
+   Tailwind 4 — expose tokens as utility-friendly colors and tokens.
+   Existing zinc/white/red utilities still work, this just adds
+   semantic shortcuts: bg-surface, text-muted, border-border, etc.
+---------------------------------------------------------------- */
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-overlay: var(--overlay);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, "SF Mono",
+    Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* ----------------------------------------------------------------
+   Base styles
+---------------------------------------------------------------- */
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numbers should always be tabular in a finance app. */
+.tabular,
+table,
+[data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Smooth defaults: anything that uses transition utilities picks up
+   our easing/duration without each component spelling it out. */
+*,
+*::before,
+*::after {
+  transition-timing-function: var(--ease-out);
+  transition-duration: var(--duration-base);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

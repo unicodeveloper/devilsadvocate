@@ -4,7 +4,7 @@ import { auditEntries, memoRuns, memos } from "../db/schema";
 import {
   readHouseView,
   getLatestHouseViewVersion,
-  writeHouseView,
+  seedHouseViewForUser,
 } from "../house-view";
 import { getFundById, listHoldingsForFund } from "../funds";
 import { fetchSectorDossier } from "../sectors";
@@ -32,6 +32,13 @@ import type {
 export type RunInput = {
   memoId: string;
   attachments: ValyuFileAttachment[];
+  /**
+   * The signed-in user's Valyu OAuth access token, when running in
+   * `valyu` app mode. Forwarded to every agent so Valyu calls go through
+   * the OAuth proxy and the user's credits are charged. In self-hosted
+   * mode this is undefined and agents fall back to `VALYU_API_KEY`.
+   */
+  accessToken?: string;
 };
 
 export type RunEvent =
@@ -77,12 +84,15 @@ export async function* runStressTest(
     return;
   }
 
-  let hvVersion = await getLatestHouseViewVersion();
-  const hvContent = await readHouseView();
+  // Run against the memo author's House View, not a global one. Seed a copy
+  // from the demo FM if the author somehow doesn't have one yet (defensive
+  // — sign-in already does this, but old users predating that flow won't).
+  let hvVersion = await getLatestHouseViewVersion(memoRow.createdByUserId);
   if (!hvVersion) {
-    await writeHouseView(hvContent, memoRow.createdByUserId);
-    hvVersion = await getLatestHouseViewVersion();
+    await seedHouseViewForUser(memoRow.createdByUserId);
+    hvVersion = await getLatestHouseViewVersion(memoRow.createdByUserId);
   }
+  const hvContent = await readHouseView(memoRow.createdByUserId);
 
   const [runRow] = await db
     .insert(memoRuns)
@@ -103,6 +113,7 @@ export async function* runStressTest(
       memoRow,
       hvContent,
       attachments: input.attachments,
+      accessToken: input.accessToken,
     });
   } else {
     yield* runStockStressTest({
@@ -110,6 +121,7 @@ export async function* runStressTest(
       memoRow,
       hvContent,
       attachments: input.attachments,
+      accessToken: input.accessToken,
     });
   }
 }
@@ -119,6 +131,7 @@ type RunSubInput = {
   memoRow: typeof memos.$inferSelect;
   hvContent: string;
   attachments: ValyuFileAttachment[];
+  accessToken?: string;
 };
 
 async function* runStockStressTest({
@@ -126,6 +139,7 @@ async function* runStockStressTest({
   memoRow,
   hvContent,
   attachments,
+  accessToken,
 }: RunSubInput): AsyncGenerator<RunEvent, void, unknown> {
   if (!memoRow.stockTicker || !memoRow.stockName) {
     yield {
@@ -146,15 +160,23 @@ async function* runStockStressTest({
   // Both are prepended to the Bear Advocate's research input.
   const peers = parsePrivatePeers(memoRow.privatePeers);
   const [sectorDossier, peerDossier] = await Promise.all([
-    fetchSectorDossier({
-      ticker: memoRow.stockTicker,
-      name: memoRow.stockName,
-      sector: memoRow.stockSector,
-    }),
-    fetchPrivatePeerDossier(peers, {
-      ticker: memoRow.stockTicker,
-      name: memoRow.stockName,
-    }),
+    fetchSectorDossier(
+      {
+        ticker: memoRow.stockTicker,
+        name: memoRow.stockName,
+        sector: memoRow.stockSector,
+      },
+      undefined,
+      accessToken,
+    ),
+    fetchPrivatePeerDossier(
+      peers,
+      {
+        ticker: memoRow.stockTicker,
+        name: memoRow.stockName,
+      },
+      accessToken,
+    ),
   ]);
 
   let bullOut: BullAdvocateOutput;
@@ -167,7 +189,7 @@ async function* runStockStressTest({
     yield { type: "agent_started", agent: "house_view_checker" };
 
     const [bullRes, bearRes, houseRes] = await Promise.all([
-      bullAdvocate({ stock: stockCtx, thesis: memoRow.thesis }),
+      bullAdvocate({ stock: stockCtx, thesis: memoRow.thesis, accessToken }),
       bearAdvocate({
         stock: stockCtx,
         thesis: memoRow.thesis,
@@ -175,6 +197,7 @@ async function* runStockStressTest({
         attachments,
         sectorDossierMarkdown: sectorDossier.dossierMarkdown || null,
         privatePeerDossierMarkdown: peerDossier.dossierMarkdown || null,
+        accessToken,
       }),
       houseViewChecker({
         stock: stockCtx,
@@ -256,6 +279,7 @@ async function* runFundStressTest({
   memoRow,
   hvContent,
   attachments,
+  accessToken,
 }: RunSubInput): AsyncGenerator<RunEvent, void, unknown> {
   if (!memoRow.fundId) {
     yield { type: "run_failed", runId, error: "Fund memo missing fundId" };
@@ -307,6 +331,7 @@ async function* runFundStressTest({
         fund: fundCtx,
         thesis: memoRow.thesis,
         holdings: holdingsForAgent,
+        accessToken,
       }),
       fundBearAdvocate({
         fund: fundCtx,
@@ -314,6 +339,7 @@ async function* runFundStressTest({
         areasOfConcern: memoRow.areasOfConcern,
         holdings: holdingsForAgent,
         attachments,
+        accessToken,
       }),
       fundHouseViewChecker({
         fund: fundCtx,

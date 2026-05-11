@@ -1,11 +1,11 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { houseViewVersions, users } from "./db/schema";
 
 /**
- * Default content used to seed the very first house-view version on a fresh
- * database. After that, the DB is the only source of truth — every UI save
- * inserts a new row and the latest row is "the current house view".
+ * Default content used to seed a House View when nothing better exists
+ * (no seed FM, or seed FM has no House View yet). New users normally get a
+ * copy of the seed FM's current House View, not this placeholder.
  */
 const PLACEHOLDER = `# House View
 
@@ -38,47 +38,92 @@ the engine flags the divergence rather than overriding.
 `;
 
 /**
- * Returns the live house view. Always reads the latest version from the
- * `house_view_versions` table; falls back to the placeholder only if the
- * table is completely empty (which should not happen after seeding).
+ * Returns the live House View content for the given user. Falls back to the
+ * seed FM's House View (so unauthed visitors and pre-onboarding states see
+ * something) and then to the placeholder if even that doesn't exist.
  */
-export async function readHouseView(): Promise<string> {
-  const latest = await getLatestHouseViewVersion();
-  return latest?.content ?? PLACEHOLDER;
+export async function readHouseView(
+  ownerUserId?: string | null,
+): Promise<string> {
+  if (ownerUserId) {
+    const own = await getLatestHouseViewVersion(ownerUserId);
+    if (own) return own.content;
+  }
+  const seedOwner = await getSeedHouseViewOwnerId();
+  if (seedOwner) {
+    const seed = await getLatestHouseViewVersion(seedOwner);
+    if (seed) return seed.content;
+  }
+  return PLACEHOLDER;
 }
 
 /**
- * Persists a new version of the house view. The DB is append-only — every
- * save creates an immutable snapshot row, and the most recent row is the
- * effective "current" version.
+ * Persists a new version of `ownerUserId`'s House View. The DB is
+ * append-only — every save creates an immutable snapshot row, and the most
+ * recent row per owner is that owner's effective "current" version.
  */
 export async function writeHouseView(
   content: string,
-  updatedByUserId: string,
+  ownerUserId: string,
+  updatedByUserId: string = ownerUserId,
 ): Promise<void> {
-  await db.insert(houseViewVersions).values({ content, updatedByUserId });
+  await db.insert(houseViewVersions).values({
+    content,
+    ownerUserId,
+    updatedByUserId,
+  });
 }
 
 /**
- * Seeds the very first version when no row exists. Idempotent — safe to call
- * on every boot. Used by the seed script after the seed user is created.
+ * Seeds a brand-new FM's House View by copying the seed FM's current
+ * version. If the seed FM has no House View yet (or no seed FM exists at
+ * all), falls back to the placeholder so the new user always lands on
+ * something they can edit. Idempotent — does nothing if the user already
+ * has at least one version.
  */
-export async function seedHouseViewIfEmpty(
-  userId: string,
+export async function seedHouseViewForUser(
+  newUserId: string,
 ): Promise<"seeded" | "skipped"> {
-  const latest = await getLatestHouseViewVersion();
-  if (latest) return "skipped";
+  const own = await getLatestHouseViewVersion(newUserId);
+  if (own) return "skipped";
+
+  const seedOwner = await getSeedHouseViewOwnerId();
+  let content = PLACEHOLDER;
+  if (seedOwner) {
+    const seed = await getLatestHouseViewVersion(seedOwner);
+    if (seed) content = seed.content;
+  }
   await db.insert(houseViewVersions).values({
-    content: PLACEHOLDER,
-    updatedByUserId: userId,
+    content,
+    ownerUserId: newUserId,
+    updatedByUserId: newUserId,
   });
   return "seeded";
 }
 
-export async function getLatestHouseViewVersion() {
+/**
+ * Initial seed used by the database seed script — creates the demo FM's
+ * House View if they don't already have one. The placeholder is the source
+ * of truth here so we never depend on another user's data.
+ */
+export async function seedDemoHouseViewIfEmpty(
+  demoUserId: string,
+): Promise<"seeded" | "skipped"> {
+  const latest = await getLatestHouseViewVersion(demoUserId);
+  if (latest) return "skipped";
+  await db.insert(houseViewVersions).values({
+    content: PLACEHOLDER,
+    ownerUserId: demoUserId,
+    updatedByUserId: demoUserId,
+  });
+  return "seeded";
+}
+
+export async function getLatestHouseViewVersion(ownerUserId: string) {
   const rows = await db
     .select()
     .from(houseViewVersions)
+    .where(eq(houseViewVersions.ownerUserId, ownerUserId))
     .orderBy(desc(houseViewVersions.createdAt))
     .limit(1);
   return rows[0] ?? null;
@@ -102,6 +147,7 @@ export type HouseViewVersionWithAuthor = {
 };
 
 export async function listHouseViewVersions(
+  ownerUserId: string,
   limit = 25,
 ): Promise<HouseViewVersionWithAuthor[]> {
   const rows = await db
@@ -114,12 +160,55 @@ export async function listHouseViewVersions(
     })
     .from(houseViewVersions)
     .leftJoin(users, eq(users.id, houseViewVersions.updatedByUserId))
+    .where(eq(houseViewVersions.ownerUserId, ownerUserId))
     .orderBy(desc(houseViewVersions.createdAt))
     .limit(limit);
   return rows;
 }
 
-export async function countHouseViewVersions(): Promise<number> {
-  const rows = await db.select().from(houseViewVersions);
+export async function countHouseViewVersions(
+  ownerUserId: string,
+): Promise<number> {
+  const rows = await db
+    .select()
+    .from(houseViewVersions)
+    .where(eq(houseViewVersions.ownerUserId, ownerUserId));
   return rows.length;
+}
+
+/**
+ * Returns the seed FM's user id, or null if the seed user doesn't exist.
+ * Used for read-only views shown to unauthed visitors and as the source
+ * material when seeding a new FM's House View.
+ */
+export async function getSeedHouseViewOwnerId(): Promise<string | null> {
+  const seedEmail = process.env.SEED_FM_EMAIL ?? "demo@devilsadvocate.local";
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, seedEmail))
+    .limit(1);
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * Convenience: load a specific version, scoped to the expected owner.
+ * Use this when displaying history items so a crafted id can't reveal
+ * another user's content.
+ */
+export async function getOwnedHouseViewVersion(
+  id: string,
+  ownerUserId: string,
+) {
+  const rows = await db
+    .select()
+    .from(houseViewVersions)
+    .where(
+      and(
+        eq(houseViewVersions.id, id),
+        eq(houseViewVersions.ownerUserId, ownerUserId),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
 }

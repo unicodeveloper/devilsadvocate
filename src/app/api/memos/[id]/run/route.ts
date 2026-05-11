@@ -47,7 +47,11 @@ export async function POST(
     );
   }
 
-  const events = runStressTest({ memoId: memo.id, attachments });
+  const events = runStressTest({
+    memoId: memo.id,
+    attachments,
+    accessToken: session.user.accessToken,
+  });
   const stream = eventsToNdjsonStream(events);
 
   return new Response(stream, {

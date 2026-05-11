@@ -50,12 +50,13 @@ export default async function MemoDetailPage({
 }) {
   const session = await auth();
   const { id } = await params;
-  const memo = await getMemoById(
-    id,
-    session ? { ownerId: session.user.id } : undefined,
-  );
+  const memo = await getMemoById(id);
   if (!memo) notFound();
-  if (!session && memo.status === "draft") notFound();
+  // Non-drafts are readable by anyone (lets signed-in FMs click through to
+  // example memos seeded by the demo user). Drafts stay private to the
+  // owning FM.
+  const isOwner = session?.user.id === memo.createdByUserId;
+  if (!isOwner && memo.status === "draft") notFound();
 
   const [latestRun, fund, allRuns, latestReviewRow] = await Promise.all([
     getLatestCompletedRun(memo.id),
@@ -72,7 +73,6 @@ export default async function MemoDetailPage({
       ? parseFundSynthesizedMemo(latestRun?.synthesizedMemoJson ?? null)
       : parseSynthesizedMemo(latestRun?.synthesizedMemoJson ?? null);
 
-  const isOwner = session?.user.id === memo.createdByUserId;
   const hasCompletedRun = Boolean(latestRun);
   const isEditable = isOwner && EDITABLE_STATUSES.has(memo.status as never);
   const bearFindingCount = synthesized?.stressTest?.findings?.length ?? 0;

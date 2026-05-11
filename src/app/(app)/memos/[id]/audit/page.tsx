@@ -34,14 +34,11 @@ export default async function AuditPage({
 }) {
   const session = await auth();
   const { id } = await params;
-  const memo = await getMemoById(
-    id,
-    session?.user.role === "fund_manager"
-      ? { ownerId: session.user.id }
-      : undefined,
-  );
+  const memo = await getMemoById(id);
   if (!memo) notFound();
-  if (session?.user.role !== "fund_manager" && memo.status === "draft") notFound();
+  // Non-drafts are public-read; drafts are private to the owning FM.
+  const isOwner = session?.user.id === memo.createdByUserId;
+  if (!isOwner && memo.status === "draft") notFound();
 
   const runs = await listRunsForMemo(memo.id);
   const entriesByRun: Record<string, AuditEntry[]> = {};

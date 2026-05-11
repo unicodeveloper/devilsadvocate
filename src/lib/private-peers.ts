@@ -42,11 +42,12 @@ export function parsePrivatePeers(raw: string | null | undefined): string[] {
 export async function fetchPrivatePeerDossier(
   peers: string[],
   stock: StockForPeers,
+  accessToken?: string,
 ): Promise<PrivatePeerDossier> {
   if (peers.length === 0) return EMPTY;
 
   const results = await Promise.all(
-    peers.map((peer) => fetchOnePeer(peer, stock)),
+    peers.map((peer) => fetchOnePeer(peer, stock, accessToken)),
   );
 
   const successful = results.filter((r) => r.summary.length > 0);
@@ -74,8 +75,9 @@ export async function fetchPrivatePeerDossier(
 async function fetchOnePeer(
   peerName: string,
   stock: StockForPeers,
+  accessToken?: string,
 ): Promise<{ name: string; summary: string; citations: Citation[] }> {
-  const valyu = getValyu();
+  const valyu = getValyu(accessToken);
   const query = [
     `Build a focused business + financial profile for the private/unlisted company "${peerName}".`,
     `${peerName} is a competitor of the listed company ${stock.name} (${stock.ticker}).`,

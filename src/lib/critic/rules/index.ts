@@ -1,7 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { db } from "../../db";
-import { criticRules, type CriticRule } from "../../db/schema";
+import {
+  criticRules,
+  criticRuleUserSettings,
+  type CriticRule,
+} from "../../db/schema";
 import type { RuleDefinition, Severity } from "../types";
 import { BUILTIN_RULES, RULES_BY_SLUG } from "./builtin";
 import { aiRuleEvaluator, type AIEvaluatorConfig } from "./ai-evaluator";
@@ -14,17 +18,45 @@ export type ResolvedRuleSet = {
 };
 
 /**
- * Loads enabled rules from the DB and resolves each row into a runnable
- * RuleDefinition:
- *   - "code" rows look up their evaluator in the BUILTIN_RULES registry
- *   - "ai" rows synthesize an evaluator that calls the LLM with the user-
- *     provided prompt
+ * Loads the effective ruleset for a memo authored by `ownerUserId`.
+ *
+ * The set is:
+ *   - all built-ins (owner_user_id IS NULL), with this user's per-user
+ *     enabled override applied (or the rule's default if no override),
+ *   - PLUS the user's own custom rules (owner_user_id = ownerUserId), using
+ *     the rule's own `enabled` column directly.
+ *
+ * Built-ins disabled by one FM stay enabled for everyone else. Custom rules
+ * stay private to the author and only ever judge their memos.
  */
-export async function loadEnabledRules(scope: "stock" | "fund"): Promise<ResolvedRuleSet> {
-  const rows = await db.select().from(criticRules).where(eq(criticRules.enabled, true));
-  const resolved: RuleDefinition[] = [];
+export async function loadEnabledRules(
+  scope: "stock" | "fund",
+  ownerUserId: string,
+): Promise<ResolvedRuleSet> {
+  // Pull rules visible to this user: built-ins (no owner) + their own customs.
+  const rows = await db
+    .select()
+    .from(criticRules)
+    .where(
+      or(
+        isNull(criticRules.ownerUserId),
+        eq(criticRules.ownerUserId, ownerUserId),
+      ),
+    );
 
+  // Pull this user's per-rule enabled overrides in a single query, keyed by
+  // rule id. Absence of a row means "use the rule's default enabled state."
+  const overrides = await db
+    .select()
+    .from(criticRuleUserSettings)
+    .where(eq(criticRuleUserSettings.userId, ownerUserId));
+  const overrideByRuleId = new Map(overrides.map((s) => [s.ruleId, s.enabled]));
+
+  const resolved: RuleDefinition[] = [];
   for (const row of rows) {
+    const effectiveEnabled =
+      overrideByRuleId.get(row.id) ?? row.enabled;
+    if (!effectiveEnabled) continue;
     if (row.scope !== "both" && row.scope !== scope) continue;
     const def = resolveRule(row);
     if (def) resolved.push(def);
@@ -77,4 +109,64 @@ function parseAiConfig(json: string): AIEvaluatorConfig | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolves the *effective* enabled state for a rule from this user's
+ * perspective. Used by the rules UI to show the right toggle state.
+ *
+ * The override map should be loaded once for the user and passed in to
+ * avoid N queries when rendering a list.
+ */
+export function effectiveEnabled(
+  rule: { id: string; enabled: boolean },
+  overrideByRuleId: Map<string, boolean>,
+): boolean {
+  const override = overrideByRuleId.get(rule.id);
+  return override ?? rule.enabled;
+}
+
+/**
+ * Loads all per-rule enabled overrides for a given user, keyed by rule id.
+ */
+export async function loadUserRuleOverrides(
+  userId: string,
+): Promise<Map<string, boolean>> {
+  const rows = await db
+    .select()
+    .from(criticRuleUserSettings)
+    .where(eq(criticRuleUserSettings.userId, userId));
+  return new Map(rows.map((s) => [s.ruleId, s.enabled]));
+}
+
+/**
+ * Upsert a per-user enabled override for a built-in rule.
+ */
+export async function setUserRuleEnabled(
+  userId: string,
+  ruleId: string,
+  enabled: boolean,
+): Promise<void> {
+  const existing = await db
+    .select()
+    .from(criticRuleUserSettings)
+    .where(
+      and(
+        eq(criticRuleUserSettings.userId, userId),
+        eq(criticRuleUserSettings.ruleId, ruleId),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .update(criticRuleUserSettings)
+      .set({ enabled, updatedAt: new Date() })
+      .where(eq(criticRuleUserSettings.id, existing[0].id));
+    return;
+  }
+  await db.insert(criticRuleUserSettings).values({
+    userId,
+    ruleId,
+    enabled,
+  });
 }

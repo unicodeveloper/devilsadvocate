@@ -24,6 +24,7 @@ export function HouseViewClient({
   versions,
   totalVersions,
   currentUserRole,
+  isViewingExample,
 }: {
   initialContent: string;
   lastUpdatedAt: Date | null;
@@ -31,6 +32,8 @@ export function HouseViewClient({
   versions: Version[];
   totalVersions: number;
   currentUserRole: "fund_manager" | "cio" | null;
+  /** True when the unauthed visitor is looking at the demo FM's House View. */
+  isViewingExample: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("read");
   const [content, setContent] = useState(initialContent);
@@ -146,13 +149,14 @@ export function HouseViewClient({
           stats={isEdit ? stats : savedStats}
           isDirty={isDirty}
           isPending={isPending}
-          canEdit={true}
+          canEdit={!isViewingExample}
           onEdit={startEdit}
           onCancel={attemptCancel}
           onSave={onSave}
           onToggleHistory={() => setHistoryOpen((v) => !v)}
           historyOpen={historyOpen}
           currentUserRole={currentUserRole}
+          isViewingExample={isViewingExample}
         />
       </div>
 
@@ -252,12 +256,14 @@ function Header({
   stats,
   isDirty,
   isPending,
+  canEdit,
   onEdit,
   onCancel,
   onSave,
   onToggleHistory,
   historyOpen,
   currentUserRole,
+  isViewingExample,
 }: {
   mode: Mode;
   savedAt: Date | null;
@@ -273,6 +279,7 @@ function Header({
   onToggleHistory: () => void;
   historyOpen: boolean;
   currentUserRole: "fund_manager" | "cio" | null;
+  isViewingExample: boolean;
 }) {
   const versionLabel = totalVersions === 0 ? "Unsaved" : `v${totalVersions}`;
   return (
@@ -280,7 +287,7 @@ function Header({
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-medium uppercase tracking-wider text-text-subtle">
-            Firm-wide policy
+            {isViewingExample ? "Example · read-only" : "Your mandate"}
           </div>
           <div className="mt-1 flex flex-wrap items-baseline gap-3">
             <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
@@ -289,6 +296,11 @@ function Header({
             <Badge tone={totalVersions === 0 ? "warning" : "neutral"}>
               {versionLabel}
             </Badge>
+            {isViewingExample ? (
+              <Badge tone="accent" dot>
+                Example
+              </Badge>
+            ) : null}
             {mode === "edit" && isDirty ? (
               <Badge tone="warning" dot aria-live="polite">
                 Unsaved
@@ -296,8 +308,9 @@ function Header({
             ) : null}
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-            Source of truth for Devil&apos;s Advocate. Every memo run evaluates against the
-            most recent saved version. Edits create immutable version snapshots.
+            {isViewingExample
+              ? "Preview of the seeded House View. Sign in to get your own copy — edits are private to you, and every memo run evaluates against the author's current version."
+              : "Your private mandate. Every memo you author runs against the most recent saved version. Edits create immutable version snapshots."}
           </p>
         </div>
 
@@ -309,10 +322,11 @@ function Header({
                 size="md"
                 onClick={onToggleHistory}
                 aria-expanded={historyOpen}
+                disabled={totalVersions === 0}
               >
                 {historyOpen ? "Hide history" : `History (${totalVersions})`}
               </Button>
-              <Button onClick={onEdit}>Edit</Button>
+              {canEdit ? <Button onClick={onEdit}>Edit</Button> : null}
             </>
           ) : (
             <>

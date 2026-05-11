@@ -1,8 +1,7 @@
-import bcrypt from "bcryptjs";
 import { db } from "./index";
 import { criticRules, fundHoldings, funds, users } from "./schema";
 import { and, eq } from "drizzle-orm";
-import { seedHouseViewIfEmpty } from "../house-view";
+import { seedDemoHouseViewIfEmpty } from "../house-view";
 import { seedDemoMemosIfEmpty, DEMO_MEMO_COUNT } from "./seed-demo-memos";
 import { BUILTIN_RULES } from "../critic/rules/builtin";
 
@@ -184,14 +183,14 @@ async function seedFunds(createdByUserId: string) {
 }
 
 async function seed() {
-  // Single-role world: every user is a fund manager. CIO seed retained as a
-  // legacy fixture for already-deployed environments; treat it as a regular
-  // user in the new model.
+  // Demo fixture user. Authentication is OAuth-only — this user can't sign
+  // in directly; it exists solely so the seeded House View, funds, and
+  // demo memos have an owner. Real users land here via the Valyu OAuth
+  // flow which upserts a fresh row keyed on their Valyu account email.
   const seedUsers = [
     {
-      email: process.env.SEED_FM_EMAIL ?? "fm@devilsadvocate.local",
-      password: process.env.SEED_FM_PASSWORD ?? "changeme-fm",
-      name: "Fund Manager",
+      email: process.env.SEED_FM_EMAIL ?? "demo@devilsadvocate.local",
+      name: "Demo Fund Manager",
       role: "fund_manager" as const,
     },
   ];
@@ -210,12 +209,12 @@ async function seed() {
       continue;
     }
 
-    const passwordHash = await bcrypt.hash(u.password, 12);
     const [inserted] = await db
       .insert(users)
       .values({
         email: u.email,
-        passwordHash,
+        // Legacy NOT NULL column; OAuth users never have a password.
+        passwordHash: "",
         name: u.name,
         role: u.role,
       })
@@ -225,11 +224,11 @@ async function seed() {
   }
 
   if (seedUserId) {
-    const result = await seedHouseViewIfEmpty(seedUserId);
+    const result = await seedDemoHouseViewIfEmpty(seedUserId);
     console.log(
       result === "seeded"
-        ? "seeded initial house view (v1)"
-        : "skip house view seed (versions exist)",
+        ? "seeded demo FM's house view (v1)"
+        : "skip house view seed (demo FM already has one)",
     );
   }
 

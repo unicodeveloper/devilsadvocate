@@ -41,6 +41,35 @@ export async function listMemosForCio() {
     .orderBy(desc(memos.updatedAt));
 }
 
+/**
+ * Returns up to `limit` memos owned by the seeded "demo" user — surfaced
+ * in the empty state on /memos so a freshly signed-up FM has something
+ * to react to before authoring their first thesis. Excludes drafts so
+ * examples always have a completed stress-test / review attached.
+ *
+ * Returns an empty array if the seed user has been renamed or removed.
+ */
+export async function listExampleMemos(limit = 3) {
+  const seedEmail = process.env.SEED_FM_EMAIL ?? "demo@devilsadvocate.local";
+  const seedUser = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, seedEmail))
+    .limit(1);
+  if (seedUser.length === 0) return [];
+  return db
+    .select()
+    .from(memos)
+    .where(
+      and(
+        eq(memos.createdByUserId, seedUser[0].id),
+        ne(memos.status, "draft"),
+      ),
+    )
+    .orderBy(desc(memos.updatedAt))
+    .limit(limit);
+}
+
 export async function listMemosForReview() {
   return db
     .select()

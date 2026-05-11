@@ -1,46 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { signInAction } from "@/lib/auth-actions";
+import { useEffect, useRef, useState } from "react";
 import { useSignIn } from "./sign-in-provider";
-
-const INPUT_CLS =
-  "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none transition-colors placeholder:text-text-subtle hover:border-border-strong focus:border-accent focus:ring-2 focus:ring-[var(--accent-ring)]";
+import { initiateOAuthFlow, isOAuthConfigured } from "@/app/lib/oauth";
 
 export function SignInModal() {
-  const { isOpen, close, request, onSignedIn } = useSignIn();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { isOpen, close } = useSignIn();
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const primaryBtnRef = useRef<HTMLButtonElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  // Capture the focused element when the modal opens; restore on close.
-  // Auto-focus the email field once the modal is rendered.
   useEffect(() => {
-    if (isOpen) {
-      triggerRef.current = document.activeElement as HTMLElement | null;
-      setEmail("");
-      setPassword("");
-      setError(null);
-      setTimeout(() => emailRef.current?.focus(), 0);
-      document.body.style.overflow = "hidden";
-    } else {
+    if (!isOpen) return;
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    const t = setTimeout(() => primaryBtnRef.current?.focus(), 0);
+    return () => {
+      clearTimeout(t);
       document.body.style.overflow = "";
       triggerRef.current?.focus?.();
-    }
-    return () => {
-      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  // ESC closes the modal; basic focus trap on Tab.
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -70,29 +55,29 @@ export function SignInModal() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, close]);
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onValyuSignIn() {
     setError(null);
-    if (!email || !password) {
-      setError("Email and password are required");
+    if (!isOAuthConfigured()) {
+      setError(
+        "Valyu sign-in is not configured. Contact your administrator.",
+      );
       return;
     }
-    startTransition(async () => {
-      const result = await signInAction(email, password);
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-      onSignedIn();
-    });
+    setIsLoading(true);
+    try {
+      await initiateOAuthFlow();
+      // initiateOAuthFlow redirects — control should not return here.
+    } catch (err) {
+      console.error("OAuth initiation error:", err);
+      setError("Failed to start sign-in. Please try again.");
+      setIsLoading(false);
+    }
   }
 
   if (!isOpen) return null;
 
   const headerId = "sign-in-modal-title";
   const descId = "sign-in-modal-desc";
-  const errorId = "sign-in-error";
 
   return (
     <div
@@ -102,100 +87,137 @@ export function SignInModal() {
       }}
     >
       <div
-        className="absolute inset-0 bg-overlay backdrop-blur-sm"
+        className="absolute inset-0 bg-bg/40 backdrop-blur-md"
         aria-hidden="true"
       />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={headerId}
-        aria-describedby={descId}
-        className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-lg sm:p-8"
-      >
-        <button
-          ref={closeBtnRef}
-          type="button"
-          onClick={close}
-          aria-label="Close"
-          className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-        >
-          <span aria-hidden="true" className="text-base leading-none">
-            ×
-          </span>
-        </button>
 
-        <div className="text-[11px] font-medium uppercase tracking-wider text-text-subtle">
-          Authenticate
-        </div>
-        <h2
-          id={headerId}
-          className="mt-1 text-lg font-semibold tracking-tight text-text"
-        >
-          Sign in to continue
-        </h2>
-        <p id={descId} className="mt-1 text-sm leading-6 text-text-muted">
-          {request?.reason ?? "Use the credentials issued by your firm administrator."}
-        </p>
+      {/* Card + halo wrapper */}
+      <div className="relative animate-in zoom-in-95 fade-in duration-300">
+        {/* Soft accent halo behind the card */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-20 rounded-[3rem] bg-accent opacity-[0.08] blur-3xl"
+        />
 
-        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="signin-email"
-              className="text-[11px] font-medium uppercase tracking-wider text-text-subtle"
-            >
-              Email
-            </label>
-            <input
-              id="signin-email"
-              ref={emailRef}
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              required
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? errorId : undefined}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={INPUT_CLS}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="signin-password"
-              className="text-[11px] font-medium uppercase tracking-wider text-text-subtle"
-            >
-              Password
-            </label>
-            <input
-              id="signin-password"
-              type="password"
-              autoComplete="current-password"
-              required
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? errorId : undefined}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={INPUT_CLS}
-            />
-          </div>
-          {error ? (
-            <p
-              id={errorId}
-              role="alert"
-              className="rounded-md border border-[color-mix(in_oklab,var(--danger)_30%,transparent)] bg-danger-soft px-3 py-2 text-xs text-danger"
-            >
-              {error}
-            </p>
-          ) : null}
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={headerId}
+          aria-describedby={descId}
+          className="relative w-[440px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)]"
+        >
+          {/* Top edge highlight — the light catching the bevel */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color-mix(in_oklab,var(--accent)_50%,transparent)] to-transparent"
+          />
+
           <button
-            type="submit"
-            disabled={isPending}
-            className="mt-2 inline-flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-fg shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            ref={closeBtnRef}
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            className="absolute right-3 top-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md text-text-subtle transition-colors hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           >
-            {isPending ? "Signing in…" : "Sign in"}
+            <span aria-hidden="true" className="text-base leading-none">
+              ×
+            </span>
           </button>
-        </form>
+
+          <div className="px-8 pb-7 pt-10">
+            {/* Header */}
+            <h2
+              id={headerId}
+              className="text-center text-[26px] font-semibold leading-tight tracking-tight text-text"
+            >
+              Devil&apos;s Advocate
+            </h2>
+
+            {/* Decorative rule — a thin accent line that echoes the
+                institutional/financial-document aesthetic */}
+            <div className="mx-auto mt-3 h-px w-12 bg-gradient-to-r from-transparent via-border-strong to-transparent" />
+
+            {/* Body */}
+            <p
+              id={descId}
+              className="mt-5 text-center text-[13px] leading-[1.7] text-text-muted"
+            >
+              Every thesis goes through a multi-agent debate, gets
+              stress-tested against your firm&apos;s House View, and earns a
+              binding verdict — before the memo ever reaches IC. Sign in to
+              put yours on the table.
+            </p>
+
+            {error ? (
+              <p
+                role="alert"
+                className="mt-5 rounded-md border border-[color-mix(in_oklab,var(--danger)_30%,transparent)] bg-danger-soft px-3 py-2 text-xs text-danger"
+              >
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              ref={primaryBtnRef}
+              type="button"
+              onClick={onValyuSignIn}
+              disabled={isLoading}
+              className="group mt-7 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent text-sm font-medium text-accent-fg shadow-[0_0_32px_var(--accent-glow)] transition-all duration-200 hover:bg-accent-hover hover:shadow-[0_0_56px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-60 disabled:shadow-none"
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  Redirecting to Valyu…
+                </>
+              ) : (
+                <>
+                  Sign in with Valyu
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </>
+              )}
+            </button>
+
+            {/* Footer — small institutional touch */}
+            <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-text-subtle">
+              <svg
+                aria-hidden="true"
+                className="h-3 w-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>Secure OAuth via Valyu</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

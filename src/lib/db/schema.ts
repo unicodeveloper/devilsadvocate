@@ -21,28 +21,17 @@ export const users = sqliteTable("users", {
   createdAt: timestamp("created_at"),
 });
 
-/**
- * Password reset tokens. Single-use; expires within ~1 hour. We never
- * store the raw token — only its SHA-256 hash — so a DB read can't be
- * replayed to take over an account.
- */
-export const passwordResetTokens = sqliteTable("password_reset_tokens", {
-  id: id(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  tokenHash: text("token_hash").notNull().unique(),
-  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
-  usedAt: integer("used_at", { mode: "timestamp_ms" }),
-  createdAt: timestamp("created_at"),
-});
-
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
-
 export const houseViewVersions = sqliteTable("house_view_versions", {
   id: id(),
   content: text("content").notNull(),
+  // The Fund Manager this House View belongs to. Each FM has their own
+  // House View — memos are evaluated against the author's, not a global one.
+  ownerUserId: text("owner_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Who made this edit. In the per-FM model this is almost always equal to
+  // ownerUserId, but kept separate so future co-edit / admin-override flows
+  // don't need another migration.
   updatedByUserId: text("updated_by_user_id")
     .notNull()
     .references(() => users.id),
@@ -274,9 +263,18 @@ export const objectionThreads = sqliteTable("objection_threads", {
 });
 
 /**
- * The rules the Critic engine enforces. Built-in rules ship with the app and
- * have source = "builtin" or "house_view". Users add their own with source =
- * "custom" via the Settings UI.
+ * The rules the Critic engine enforces. Two flavors:
+ *   - Built-in rules (source = "builtin" | "house_view") ship with the app
+ *     and have owner_user_id = NULL — they're global definitions every FM
+ *     sees in the rule catalogue.
+ *   - Custom rules (source = "custom") are authored by an individual FM and
+ *     have owner_user_id set to that FM. Only the owner sees them, only the
+ *     owner's memos run against them.
+ *
+ * The `enabled` column is the *default* enabled state for built-ins (used
+ * when an FM has no per-user override row) and the actual state for customs
+ * (since only the owner sees them). Per-FM overrides for built-ins live in
+ * `critic_rule_user_settings` below.
  */
 export const criticRules = sqliteTable("critic_rules", {
   id: id(),
@@ -294,12 +292,40 @@ export const criticRules = sqliteTable("critic_rules", {
     .notNull()
     .default("both"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  /**
+   * NULL for built-ins (global). Set for custom rules — scopes visibility
+   * and enforces ownership for edit/delete actions.
+   */
+  ownerUserId: text("owner_user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
   createdByUserId: text("created_by_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+/**
+ * Per-FM override of the enabled state for a rule. Mostly used for built-ins
+ * — an FM disables a built-in they disagree with, only their memos skip it.
+ * The presence of a row means "this user has explicitly chosen"; absence
+ * means "use the rule's default enabled state."
+ */
+export const criticRuleUserSettings = sqliteTable(
+  "critic_rule_user_settings",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ruleId: text("rule_id")
+      .notNull()
+      .references(() => criticRules.id, { onDelete: "cascade" }),
+    enabled: integer("enabled", { mode: "boolean" }).notNull(),
+    updatedAt: timestamp("updated_at"),
+  },
+);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

@@ -18,13 +18,15 @@ export type BullAdvocateInput = {
   thesis: string;
   /** Optional Valyu search results passed in by the orchestrator. */
   supportingContext?: string;
+  /** OAuth token in valyu mode; routes Valyu calls to the user's credits. */
+  accessToken?: string;
 };
 
 export async function bullAdvocate(
   input: BullAdvocateInput,
 ): Promise<AgentResult<import("./types").BullAdvocateOutput>> {
   const t0 = Date.now();
-  const valyu = getValyu();
+  const valyu = getValyu(input.accessToken);
 
   // Pull recent positive context if not provided
   let context = input.supportingContext;

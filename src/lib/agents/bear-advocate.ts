@@ -36,13 +36,15 @@ export type BearAdvocateInput = {
   sectorDossierMarkdown?: string | null;
   /** Optional private-peer dossier in markdown — prepended after sector dossier. */
   privatePeerDossierMarkdown?: string | null;
+  /** OAuth token in valyu mode; routes Valyu calls to the user's credits. */
+  accessToken?: string;
 };
 
 export async function bearAdvocate(
   input: BearAdvocateInput,
 ): Promise<AgentResult<import("./types").BearAdvocateOutput>> {
   const t0 = Date.now();
-  const valyu = getValyu();
+  const valyu = getValyu(input.accessToken);
 
   const researchQuery = buildResearchQuery(input);
   const hasFiles = (input.attachments?.length ?? 0) > 0;

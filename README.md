@@ -136,7 +136,7 @@ Start the dev server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), sign in with `fm@devilsadvocate.local` / `changeme` (or whatever you set in `.env.local`), and you're in.
+Open [http://localhost:3000](http://localhost:3000) and sign in with your Valyu account — the app uses Valyu OAuth (PKCE) for authentication. In `valyu` mode, your Valyu credits cover research calls; in `self-hosted` mode, the server's `VALYU_API_KEY` is used regardless of who is signed in.
 
 ---
 
@@ -145,11 +145,16 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `fm@devilsadvo
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
 | `OPENAI_API_KEY` | yes | — | All agents and AI rule evaluators |
-| `VALYU_API_KEY` | yes | — | Deep research, stock search, peer dossiers |
+| `VALYU_API_KEY` | self-hosted only | — | Deep research, stock search, peer dossiers (used when `NEXT_PUBLIC_APP_MODE` != `valyu`) |
 | `AUTH_SECRET` | yes | — | NextAuth session encryption |
+| `NEXT_PUBLIC_APP_MODE` | no | `self-hosted` | Set to `valyu` to charge research against the signed-in user's Valyu credits via the OAuth proxy. |
+| `NEXT_PUBLIC_VALYU_CLIENT_ID` | valyu mode | — | OAuth client ID issued by Valyu for this deployment |
+| `VALYU_CLIENT_SECRET` | valyu mode | — | OAuth client secret for the PKCE token exchange |
+| `NEXT_PUBLIC_VALYU_AUTH_URL` | valyu mode | — | Valyu authorization server origin |
+| `NEXT_PUBLIC_REDIRECT_URI` | valyu mode | — | OAuth callback URL — must point at `/auth/valyu/callback` on this app |
+| `VALYU_APP_URL` | valyu mode | `https://platform.valyu.ai` | Valyu platform origin used for userinfo + OAuth proxy |
 | `DATABASE_URL` | no | `./data/sqlite.db` (local) / `/data/sqlite.db` (Docker) | SQLite file path |
-| `SEED_FM_EMAIL` | no | `fm@devilsadvocate.local` | Initial fund-manager account |
-| `SEED_FM_PASSWORD` | no | `changeme` | Initial password — **change before deploying** |
+| `SEED_FM_EMAIL` | no | `demo@devilsadvocate.local` | Owner email for the seeded demo data (House View, funds, demo memos) |
 | `HOUSE_VIEW_PATH` | no | `./data/house-view.md` | Path to the firm's House View markdown |
 
 ---
@@ -185,10 +190,18 @@ In the Railway project → **Variables**, add:
 
 ```
 OPENAI_API_KEY=sk-...
-VALYU_API_KEY=...
 AUTH_SECRET=<openssl rand -base64 32>
-SEED_FM_EMAIL=you@yourcompany.com
-SEED_FM_PASSWORD=<a-strong-password>
+
+# Self-hosted mode (set NEXT_PUBLIC_APP_MODE to anything other than "valyu"):
+VALYU_API_KEY=...
+
+# Valyu mode (charges research against the signed-in user's credits):
+NEXT_PUBLIC_APP_MODE=valyu
+NEXT_PUBLIC_VALYU_CLIENT_ID=...
+VALYU_CLIENT_SECRET=...
+NEXT_PUBLIC_VALYU_AUTH_URL=https://auth.valyu.ai
+NEXT_PUBLIC_REDIRECT_URI=https://your-domain.com/auth/valyu/callback
+VALYU_APP_URL=https://platform.valyu.ai
 ```
 
 `DATABASE_URL` and `HOUSE_VIEW_PATH` default to `/data/...` in the Docker image — leave them unset unless you want to override.
@@ -220,7 +233,7 @@ Railway → **Settings → Networking → Custom Domain**. Add your domain, poin
 
 ### Post-deploy checklist
 
-- [ ] Sign in with the seeded FM credentials and immediately change the password (or rotate the seed env vars and redeploy).
+- [ ] Sign in with your Valyu account — the first sign-in creates your user row automatically.
 - [ ] Edit the House View at `/house-view` to reflect your firm's actual investment framework. The placeholder text is generic.
 - [ ] Visit `/rules` and review which built-in rules you want enabled. Add custom AI rules for your firm-specific concerns.
 

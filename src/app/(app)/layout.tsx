@@ -30,6 +30,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Pages under (app)/ render publicly — unauthed visitors see a read-only
+  // CIO-style view. Sign-in is triggered by interactive surfaces via
+  // `useSignIn().requireAuth()` (which opens the modal). Server actions
+  // and API routes are the actual security gates, not this layout.
   const session = await auth();
   const safeSession: SessionShape = session?.user
     ? {
@@ -38,6 +42,7 @@ export default async function AppLayout({
           email: session.user.email,
           name: session.user.name ?? null,
           role: session.user.role,
+          picture: session.user.picture ?? null,
         },
       }
     : null;

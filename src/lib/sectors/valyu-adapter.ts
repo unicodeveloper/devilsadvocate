@@ -25,13 +25,14 @@ const QUERY_BUILDERS: Partial<Record<SectorKey, (s: StockForSector) => string>> 
 export async function fetchSectorDossierValyu(
   sectorKey: SectorKey,
   stock: StockForSector,
+  accessToken?: string,
 ): Promise<SectorDossier> {
   const builder = QUERY_BUILDERS[sectorKey];
   if (!builder) {
     return emptyDossier(sectorKey);
   }
 
-  const valyu = getValyu();
+  const valyu = getValyu(accessToken);
   const query = builder(stock);
 
   let answerContents = "";

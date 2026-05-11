@@ -193,9 +193,16 @@ export async function runReview(memoId: string): Promise<RunReviewResult> {
     };
   }
 
-  const houseViewMarkdown = await readHouseView();
-  const hvVersion = await getLatestHouseViewVersion();
-  const ruleset = await loadEnabledRules(memoRow.entityType as "stock" | "fund");
+  // Reviews are evaluated against the memo author's House View — that's
+  // who owns the mandate this thesis is being measured against.
+  const houseViewMarkdown = await readHouseView(memoRow.createdByUserId);
+  const hvVersion = await getLatestHouseViewVersion(memoRow.createdByUserId);
+  // Run the memo author's ruleset: global built-ins (with their toggle
+  // overrides) + their own custom rules. Another FM's customs never run.
+  const ruleset = await loadEnabledRules(
+    memoRow.entityType as "stock" | "fund",
+    memoRow.createdByUserId,
+  );
 
   // Insert the running review record
   const [reviewRow] = await db

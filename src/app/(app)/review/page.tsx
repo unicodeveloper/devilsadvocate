@@ -66,9 +66,10 @@ const COLUMN_BORDER: Record<ColumnTone, string> = {
 
 export default async function ReviewPage() {
   const session = await auth();
-  const userMemos = session
-    ? await listMemosForUser(session.user.id)
-    : await listMemosForCio();
+  const userMemos =
+    session?.user.role === "fund_manager"
+      ? await listMemosForUser(session.user.id)
+      : await listMemosForCio();
 
   const memoIds = userMemos.map((m) => m.id);
   const fundIds = [

@@ -19,10 +19,11 @@ export type { SectorDossier, SectorKey, StockForSector };
 export async function fetchSectorDossier(
   stock: StockForSector,
   sectorKey?: SectorKey,
+  accessToken?: string,
 ): Promise<SectorDossier> {
   const key = sectorKey ?? classifySector(stock);
 
   if (key === "unknown") return emptyDossier(key);
   if (key === "pharma") return fetchPharmaSectorDossier(stock);
-  return fetchSectorDossierValyu(key, stock);
+  return fetchSectorDossierValyu(key, stock, accessToken);
 }

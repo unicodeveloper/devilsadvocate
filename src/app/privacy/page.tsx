@@ -52,8 +52,10 @@ export default function PrivacyPage() {
         <h2>What we collect</h2>
         <ul>
           <li>
-            <strong>Account data</strong> — your email address and a bcrypt-
-            hashed password. We never store passwords in plain text.
+            <strong>Account data</strong> — your name, email, and profile
+            picture as returned by Valyu after you sign in with your Valyu
+            account. We don&apos;t store any passwords; authentication is
+            handled entirely by Valyu via OAuth.
           </li>
           <li>
             <strong>Memo content</strong> — every thesis, area of concern,
@@ -92,12 +94,10 @@ export default function PrivacyPage() {
             .
           </li>
           <li>
-            <strong>Valyu</strong> — receives query strings for research
-            retrieval. Memo body is included as research context.
-          </li>
-          <li>
-            <strong>Resend</strong> — used only for transactional email
-            (password reset). No marketing communication.
+            <strong>Valyu</strong> — handles authentication (OAuth) and
+            receives query strings for research retrieval. Memo body is
+            included as research context. When you&apos;re signed in,
+            research calls are billed against your Valyu account credits.
           </li>
           <li>
             <strong>Railway</strong> — hosting infrastructure. Your data
@@ -123,10 +123,11 @@ export default function PrivacyPage() {
 
         <h2>Security</h2>
         <p>
-          Traffic is served over HTTPS with HSTS. Passwords use bcrypt
-          (12 rounds). Session tokens are signed JWTs with a server-only
-          secret. Rate limiting protects sign-in and password reset from
-          brute force.
+          Traffic is served over HTTPS with HSTS. Sign-in goes through
+          Valyu via OAuth 2.0 with PKCE — we never see your Valyu password.
+          Session tokens are signed JWTs with a server-only secret. Rate
+          limiting protects the OAuth token exchange endpoints from replay
+          attacks.
         </p>
 
         <h2>Contact</h2>

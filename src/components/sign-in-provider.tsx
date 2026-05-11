@@ -17,6 +17,7 @@ export type SessionShape = {
     email: string;
     name?: string | null;
     role: Role;
+    picture?: string | null;
   };
 } | null;
 

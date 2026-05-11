@@ -35,13 +35,15 @@ export type FundBullAdvocateInput = {
   fund: FundContext;
   thesis: string;
   holdings: FundHoldingForAgent[];
+  /** OAuth token in valyu mode; routes Valyu calls to the user's credits. */
+  accessToken?: string;
 };
 
 export async function fundBullAdvocate(
   input: FundBullAdvocateInput,
 ): Promise<AgentResult<import("./types").FundBullAdvocateOutput>> {
   const t0 = Date.now();
-  const valyu = getValyu();
+  const valyu = getValyu(input.accessToken);
   const top = input.holdings.slice(0, 8);
 
   const tickerNames = top.map((h) => `${h.ticker} (${h.name})`).join(", ");

@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/components/theme-provider";
+import { AuthInitializer } from "@/components/auth-initializer";
 import { SITE, siteUrl } from "@/lib/site";
 
 const plexSans = IBM_Plex_Sans({
@@ -157,7 +158,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-bg font-sans text-text">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthInitializer>{children}</AuthInitializer>
+        </ThemeProvider>
       </body>
     </html>
   );

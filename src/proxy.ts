@@ -16,8 +16,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
  *     React hydration mismatches across HMR reloads.
  *
  * Rate-limit strategy:
- *   - 5 auth attempts per IP per minute on /api/auth/callback/credentials,
- *     /api/auth/signin, /api/forgot-password, /api/reset-password.
+ *   - 5 auth attempts per IP per minute on /api/oauth/token and
+ *     /api/oauth/refresh — protects the PKCE token exchange + refresh
+ *     endpoints from credential-stuffing replays.
  *   - In-memory store; sufficient for single-instance Railway.
  */
 
@@ -44,7 +45,10 @@ function buildCsp(nonce: string | null): string {
     `'self' https://fonts.gstatic.com https://fonts.googleapis.com ` +
     `https://api.openai.com https://api.valyu.network https://query1.finance.yahoo.com`;
   const fontSrc = `'self' https://fonts.gstatic.com data:`;
-  const imgSrc = `'self' data: blob: https://fonts.gstatic.com`;
+  // `https:` allows OAuth provider avatars (Valyu, Google, etc.) without
+  // requiring a hardcoded allow-list per provider. Avatars are non-interactive
+  // image loads — broad image trust is the standard CSP posture for them.
+  const imgSrc = `'self' data: blob: https: https://fonts.gstatic.com`;
   return [
     `default-src 'self'`,
     `base-uri 'self'`,
@@ -62,10 +66,8 @@ function buildCsp(nonce: string | null): string {
 }
 
 const RATE_LIMITED = [
-  "/api/auth/callback/credentials",
-  "/api/auth/signin",
-  "/api/forgot-password",
-  "/api/reset-password",
+  "/api/oauth/token",
+  "/api/oauth/refresh",
 ];
 
 export function proxy(req: NextRequest) {

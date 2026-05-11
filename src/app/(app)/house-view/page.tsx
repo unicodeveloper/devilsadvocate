@@ -1,6 +1,7 @@
 import {
   countHouseViewVersions,
   getLatestHouseViewVersion,
+  getSeedHouseViewOwnerId,
   listHouseViewVersions,
   readHouseView,
 } from "@/lib/house-view";
@@ -10,12 +11,20 @@ import { HouseViewClient } from "./client";
 export const dynamic = "force-dynamic";
 
 export default async function HouseViewPage() {
-  const [content, latest, versions, totalVersions, session] = await Promise.all([
-    readHouseView(),
-    getLatestHouseViewVersion(),
-    listHouseViewVersions(25),
-    countHouseViewVersions(),
-    auth(),
+  const session = await auth();
+
+  // Signed-in users edit their own House View. Unauthed visitors see the
+  // demo FM's as a read-only example (same pattern as the memos page).
+  const ownerId =
+    session?.user.id ?? (await getSeedHouseViewOwnerId());
+
+  const [content, latest, versions, totalVersions] = await Promise.all([
+    readHouseView(ownerId),
+    ownerId ? getLatestHouseViewVersion(ownerId) : Promise.resolve(null),
+    ownerId
+      ? listHouseViewVersions(ownerId, 25)
+      : Promise.resolve([] as Awaited<ReturnType<typeof listHouseViewVersions>>),
+    ownerId ? countHouseViewVersions(ownerId) : Promise.resolve(0),
   ]);
 
   return (
@@ -34,6 +43,7 @@ export default async function HouseViewPage() {
       }))}
       totalVersions={totalVersions}
       currentUserRole={session?.user.role ?? null}
+      isViewingExample={!session}
     />
   );
 }

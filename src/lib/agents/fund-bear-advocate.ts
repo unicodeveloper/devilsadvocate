@@ -34,13 +34,15 @@ export type FundBearAdvocateInput = {
   areasOfConcern?: string | null;
   holdings: FundHoldingForAgent[];
   attachments?: ValyuFileAttachment[];
+  /** OAuth token in valyu mode; routes Valyu calls to the user's credits. */
+  accessToken?: string;
 };
 
 export async function fundBearAdvocate(
   input: FundBearAdvocateInput,
 ): Promise<AgentResult<import("./types").FundBearAdvocateOutput>> {
   const t0 = Date.now();
-  const valyu = getValyu();
+  const valyu = getValyu(input.accessToken);
   const hasFiles = (input.attachments?.length ?? 0) > 0;
 
   const top = input.holdings.slice(0, 10);

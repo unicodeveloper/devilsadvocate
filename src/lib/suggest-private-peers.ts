@@ -42,6 +42,8 @@ export async function suggestPrivatePeers(input: {
   ticker: string;
   name: string;
   sector?: string | null;
+  /** OAuth token in valyu mode; routes Valyu calls to the user's credits. */
+  accessToken?: string;
 }): Promise<PrivatePeerSuggestion[]> {
   const key = cacheKey(input.ticker, input.name);
   const cached = cache.get(key);
@@ -49,7 +51,7 @@ export async function suggestPrivatePeers(input: {
 
   let searchSnippet = "";
   try {
-    const valyu = getValyu();
+    const valyu = getValyu(input.accessToken);
     const query = [
       `Private, unlisted, VC-backed competitors of ${input.name} (${input.ticker})`,
       input.sector ? `in the ${input.sector} sector` : null,

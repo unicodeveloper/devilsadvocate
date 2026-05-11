@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Badge, Button, EmptyState as EmptyStateUI } from "@/components/ui";
+import { useSignIn } from "@/components/sign-in-provider";
 import {
   createCustomRuleAction,
   deleteCustomRuleAction,
@@ -31,17 +32,30 @@ const INPUT_CLS =
 export function RulesClient({
   builtIn,
   custom,
+  canEdit,
 }: {
   builtIn: RuleVm[];
   custom: RuleVm[];
+  canEdit: boolean;
 }) {
   const [editing, setEditing] = useState<EditingState>(null);
+  const { requireAuth } = useSignIn();
+
+  function tryCreate() {
+    if (!canEdit) {
+      requireAuth({
+        reason: "Sign in to add your own rules. Your custom rules and toggles are private to you.",
+      });
+      return;
+    }
+    setEditing({ mode: "create" });
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end">
         <Button
-          onClick={() => setEditing({ mode: "create" })}
+          onClick={tryCreate}
           iconLeft={
             <svg
               width="13"
@@ -71,44 +85,56 @@ export function RulesClient({
         />
       ) : null}
 
-      <Section
-        title="Custom rules"
-        subtitle="LLM-evaluated against the memo on every submit"
-      >
-        {custom.length === 0 ? (
-          <EmptyStateUI
-            title="No custom rules yet"
-            body="Add a rule with a natural-language prompt and the Critic engine will evaluate every submitted memo against it."
-            action={
-              <button
-                type="button"
-                onClick={() => setEditing({ mode: "create" })}
-                className="text-xs font-medium text-accent underline-offset-4 hover:underline"
-              >
-                Add your first →
-              </button>
-            }
-          />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {custom.map((r) => (
-              <RuleRow
-                key={r.id}
-                rule={r}
-                onEdit={() => setEditing({ mode: "edit", rule: r })}
-              />
-            ))}
-          </ul>
-        )}
-      </Section>
+      {canEdit ? (
+        <Section
+          title="Your custom rules"
+          subtitle="Private to you. LLM-evaluated against every memo you submit."
+        >
+          {custom.length === 0 ? (
+            <EmptyStateUI
+              title="No custom rules yet"
+              body="Add a rule with a natural-language prompt and the Critic engine will evaluate every submitted memo against it."
+              action={
+                <button
+                  type="button"
+                  onClick={tryCreate}
+                  className="text-xs font-medium text-accent underline-offset-4 hover:underline"
+                >
+                  Add your first →
+                </button>
+              }
+            />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {custom.map((r) => (
+                <RuleRow
+                  key={r.id}
+                  rule={r}
+                  canEdit={canEdit}
+                  onEdit={() => setEditing({ mode: "edit", rule: r })}
+                />
+              ))}
+            </ul>
+          )}
+        </Section>
+      ) : null}
 
       <Section
         title="Built-in rules"
-        subtitle="Ship with Devil's Advocate. Disable any you don't want enforced."
+        subtitle={
+          canEdit
+            ? "Ship with Devil's Advocate. Toggle any off — only your memos skip it."
+            : "Ship with Devil's Advocate. Sign in to override any of these for your own memos."
+        }
       >
         <ul className="flex flex-col gap-2">
           {builtIn.map((r) => (
-            <RuleRow key={r.id} rule={r} onEdit={null} />
+            <RuleRow
+              key={r.id}
+              rule={r}
+              canEdit={canEdit}
+              onEdit={null}
+            />
           ))}
         </ul>
       </Section>
@@ -138,11 +164,26 @@ function Section({
   );
 }
 
-function RuleRow({ rule, onEdit }: { rule: RuleVm; onEdit: (() => void) | null }) {
+function RuleRow({
+  rule,
+  canEdit,
+  onEdit,
+}: {
+  rule: RuleVm;
+  canEdit: boolean;
+  onEdit: (() => void) | null;
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const { requireAuth } = useSignIn();
 
   function toggle() {
+    if (!canEdit) {
+      requireAuth({
+        reason: "Sign in to override built-in rules. Your toggles only affect your own memos.",
+      });
+      return;
+    }
     setError(null);
     const fd = new FormData();
     fd.set("ruleId", rule.id);

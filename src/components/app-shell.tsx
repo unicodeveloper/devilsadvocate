@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { signOutAction } from "@/lib/auth-actions";
+import { useAuthStore } from "@/app/stores/auth-store";
 import { useSignIn } from "./sign-in-provider";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui";
@@ -15,6 +16,7 @@ type ShellUser = {
   name?: string | null;
   email: string;
   role: Role;
+  picture?: string | null;
 } | null;
 
 const FM_NAV = [
@@ -202,20 +204,10 @@ export function AppShell({
             {user ? (
               <div className="border-t border-border px-3 py-3">
                 <div
-                  className="flex items-center gap-2 px-2 py-1.5 text-xs text-text-muted"
+                  className="flex items-center gap-2.5 px-2 py-1.5 text-xs text-text-muted"
                   title={user.email}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent"
-                  >
-                    {(user.name ?? user.email)
-                      .split(/[\s@]+/)
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((s) => s[0]?.toUpperCase() ?? "")
-                      .join("") || "FM"}
-                  </span>
+                  <UserAvatar user={user} size={28} />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-text">
                       {user.name ?? user.email.split("@")[0]}
@@ -244,46 +236,239 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function initialsFor(user: { name?: string | null; email: string }): string {
+  return (
+    (user.name ?? user.email)
+      .split(/[\s@]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase() ?? "")
+      .join("") || "FM"
+  );
+}
+
+function InitialsBadge({
+  initials,
+  size,
+}: {
+  initials: string;
+  size: number;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex items-center justify-center rounded-full bg-accent-soft font-semibold text-accent"
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.42),
+      }}
+    >
+      {initials}
+    </span>
+  );
+}
+
+/**
+ * Module-scope cache of "this URL is bad" decisions, keyed by URL string.
+ * Survives component remounts so we don't re-attempt a known-broken avatar
+ * (which would flash the broken-image icon every render).
+ */
+const knownBadAvatars = new Set<string>();
+
+/**
+ * User avatar: renders the picture URL when present and verified to load,
+ * otherwise an initials badge. We preload the image with `new Image()` and
+ * only commit to rendering the `<img>` in the DOM after a successful
+ * `onload`. This avoids the broken-image flash that happens when an `<img>`
+ * is rendered first and only falls back after the network failure — which
+ * is unreliable anyway, because CSP-blocked loads sometimes never fire
+ * `onerror` in Chrome.
+ */
+function UserAvatar({
+  user,
+  size,
+}: {
+  user: NonNullable<ShellUser>;
+  size: number;
+}) {
+  const initials = initialsFor(user);
+  const pictureUrl = user.picture ?? null;
+
+  // Three states: "checking" (preloading), "ok" (use img), "bad" (use initials).
+  // We start optimistically: if we've already proven this URL is bad in this
+  // session, skip straight to "bad". Otherwise we start at "checking" and
+  // render the initials badge while preloading. If preload succeeds, we swap
+  // to the image; if it fails, we mark the URL bad and stay on initials.
+  const initialStatus: "checking" | "ok" | "bad" =
+    !pictureUrl
+      ? "bad"
+      : knownBadAvatars.has(pictureUrl)
+        ? "bad"
+        : "checking";
+  const [status, setStatus] = useState<"checking" | "ok" | "bad">(initialStatus);
+
+  useEffect(() => {
+    if (!pictureUrl) {
+      setStatus("bad");
+      return;
+    }
+    if (knownBadAvatars.has(pictureUrl)) {
+      setStatus("bad");
+      return;
+    }
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    let cancelled = false;
+    img.onload = () => {
+      if (!cancelled) setStatus("ok");
+    };
+    img.onerror = () => {
+      if (!cancelled) {
+        knownBadAvatars.add(pictureUrl);
+        setStatus("bad");
+      }
+    };
+    img.src = pictureUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [pictureUrl]);
+
+  if (status !== "ok" || !pictureUrl) {
+    return <InitialsBadge initials={initials} size={size} />;
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={pictureUrl}
+      alt={user.name ?? user.email}
+      width={size}
+      height={size}
+      referrerPolicy="no-referrer"
+      className="rounded-full object-cover"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
 function SignedInBlock({ user }: { user: NonNullable<ShellUser> }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const zustandSignOut = useAuthStore((s) => s.signOut);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   function onSignOut() {
     startTransition(async () => {
+      zustandSignOut();
       await signOutAction();
       router.refresh();
     });
   }
 
-  const initials = (user.name ?? user.email)
-    .split(/[\s@]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? "")
-    .join("");
+  // Close on outside click + Escape. Both are required for a real menu —
+  // a hover-only menu fails for touch + keyboard users.
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const displayName = user.name ?? user.email.split("@")[0];
 
   return (
-    <div className="hidden items-center gap-2 rounded-md border border-border bg-surface px-2 py-1 sm:flex">
-      <span
-        aria-hidden="true"
-        className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent"
-      >
-        {initials || "FM"}
-      </span>
-      <span
-        className="hidden text-xs text-text-muted lg:inline"
-        title={user.email}
-      >
-        {user.name ?? user.email.split("@")[0]}
-      </span>
+    <div ref={menuRef} className="relative hidden sm:block">
       <button
         type="button"
-        onClick={onSignOut}
-        disabled={isPending}
-        className="text-xs text-text-subtle transition-colors hover:text-text disabled:opacity-50"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={user.email}
+        className={cn(
+          "flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-muted transition-colors",
+          "hover:border-border-strong hover:text-text",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]",
+        )}
       >
-        {isPending ? "…" : "Sign out"}
+        <UserAvatar user={user} size={24} />
+        <span className="hidden lg:inline">{displayName}</span>
+        <svg
+          aria-hidden="true"
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn(
+            "hidden text-text-subtle transition-transform lg:inline",
+            open && "rotate-180",
+          )}
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </button>
+
+      {open ? (
+        <div
+          role="menu"
+          aria-label="Account menu"
+          className="absolute right-0 top-[calc(100%+6px)] z-50 w-60 origin-top-right overflow-hidden rounded-lg border border-border bg-surface shadow-lg animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="border-b border-border px-3 py-3">
+            <div className="flex items-center gap-2.5">
+              <UserAvatar user={user} size={32} />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-xs font-medium text-text">
+                  {displayName}
+                </span>
+                <span className="truncate text-[11px] text-text-subtle">
+                  {user.email}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={onSignOut}
+            disabled={isPending}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-50"
+          >
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {isPending ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -291,12 +476,14 @@ function SignedInBlock({ user }: { user: NonNullable<ShellUser> }) {
 function MobileSignOut() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const zustandSignOut = useAuthStore((s) => s.signOut);
 
   return (
     <button
       type="button"
       onClick={() => {
         startTransition(async () => {
+          zustandSignOut();
           await signOutAction();
           router.refresh();
         });

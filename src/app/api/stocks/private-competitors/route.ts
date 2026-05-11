@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       ticker: body.ticker,
       name: body.name,
       sector: body.sector ?? null,
+      accessToken: session.user.accessToken,
     });
     return NextResponse.json({ competitors });
   } catch (err) {

@@ -120,7 +120,7 @@ TipTap                               ← rich-text editor
 - **Node.js 20+** (Node 24 recommended; matches the Docker image)
 - **npm** (or pnpm — the lockfile is npm)
 - An **OpenAI API key**
-- A **Valyu API key** ([valyu.network](https://valyu.network))
+- A **Valyu API key** ([valyu.ai](https://valyu.ai))
 
 ### Steps
 
@@ -176,30 +176,13 @@ In `valyu` mode, your Valyu credits cover research calls; in `self-hosted` mode,
 
 ---
 
-## Useful npm scripts
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | Next.js dev server with Turbopack |
-| `npm run build` | Production build |
-| `npm run start` | Production server (after build) |
-| `npm run lint` | ESLint |
-| `npm run db:generate` | Generate a new Drizzle migration from schema changes |
-| `npm run db:migrate` | Apply pending migrations |
-| `npm run db:seed` | Seed the demo FM, its House View, the demo funds + memos, and the built-in Critic rules catalogue. Idempotent. |
-| `npm run db:studio` | Drizzle Studio (visual DB browser) |
-
----
-
 ## Deploying to Railway
-
-Devil's Advocate ships with a `Dockerfile` and `railway.json` ready to go. The image bundles Playwright + Chromium for PDF rendering and uses a `/data` volume for SQLite persistence.
 
 ### One-time setup
 
 1. **Fork or clone the repo** to your own GitHub account.
 2. Sign in to [Railway](https://railway.app) and create a new project from your repo.
-3. Railway will detect `railway.json` and use the Dockerfile build.
+3. Mount a volume for storage for the sqlite db file.
 
 ### Set environment variables
 
@@ -221,20 +204,20 @@ NEXT_PUBLIC_REDIRECT_URI=https://your-domain.com/auth/valyu/callback
 VALYU_APP_URL=https://platform.valyu.ai
 ```
 
-`DATABASE_URL` defaults to `/data/sqlite.db` in the Docker image — leave it unset unless you want to override.
+`DATABASE_URL` defaults to `/app/data/sqlite.db`.
 
 ### Add a persistent volume
 
 SQLite needs disk that survives redeploys.
 
 1. In your Railway service → **Settings → Volumes**.
-2. Add a volume mounted at **`/data`** (any size you like; 1GB is plenty to start).
+2. Add a volume mounted at **`/app/data`** (any size you like; 1GB is plenty to start).
 
-That's it. The container's `VOLUME ["/data"]` directive means the SQLite file (which now stores House View content directly — no separate markdown file on disk) and any uploaded artifacts all live on this volume.
+That's it. The container's `VOLUME ["/app/data"]` directive means the SQLite file and any uploaded artifacts all live on this volume.
 
 ### Deploy
 
-Push to your default branch. Railway builds the Dockerfile and runs:
+Push to your default branch. Railway builds and runs:
 
 ```
 npm run db:migrate && npm run db:seed && node server.js

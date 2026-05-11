@@ -38,7 +38,7 @@ const AIEvalOutputSchema = z.object({
     .describe("Objections to raise. Empty when violated = false."),
 });
 
-const SYSTEM = `You are a single-rule evaluator inside Mandate, the AI CIO that reviews investment memos.
+const SYSTEM = `You are a single-rule evaluator inside Devil's Advocate, the AI CIO that reviews investment memos.
 
 Your job: judge whether a Fund Manager's memo violates ONE specific rule. The rule is given to you. You see the memo (thesis, areas of concern, stress-test findings) and decide.
 
@@ -63,7 +63,7 @@ function renderMemoContext(ctx: RuleContext): string {
   if (ctx.memo.privatePeers) {
     parts.push("", "## Private competitors", ctx.memo.privatePeers);
   }
-  parts.push("", "## Mandate stress-test summary");
+  parts.push("", "## Stress-test summary");
   parts.push(ctx.outputs.synth.stressTest.summary || "(no summary)");
   if (ctx.outputs.synth.stressTest.findings.length) {
     parts.push("", "Top stress-test findings:");

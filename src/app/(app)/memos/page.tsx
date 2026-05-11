@@ -49,7 +49,7 @@ export default async function MemosPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={heading}
-        description={`${rows.length} ${rows.length === 1 ? "memo" : "memos"} — Mandate has reviewed every submitted thesis against your House View.`}
+        description={`${rows.length} ${rows.length === 1 ? "memo" : "memos"} — Devil's Advocate has reviewed every submitted thesis against your House View.`}
         actions={!session || isFm ? <NewMemoButton /> : null}
       />
 
@@ -57,7 +57,7 @@ export default async function MemosPage() {
         <EmptyState
           icon={<DocIcon />}
           title="No memos yet"
-          body="Stress-test a stock or fund thesis. Mandate runs Bull Advocate, Bear Advocate, House View Checker, and Synthesizer in parallel."
+          body="Stress-test a stock or fund thesis. Devil's Advocate runs Bull Advocate, Bear Advocate, House View Checker, and Synthesizer in parallel."
           action={
             !session || isFm ? (
               <Link

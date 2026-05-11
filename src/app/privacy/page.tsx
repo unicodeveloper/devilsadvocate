@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy · Mandate",
+  title: "Privacy Policy · Devil's Advocate",
   description:
-    "How Mandate handles your data — what we collect, why, and how to delete it.",
+    "How Devil's Advocate handles your data — what we collect, why, and how to delete it.",
   alternates: { canonical: "/privacy" },
 };
 
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
       <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:tracking-tight prose-headings:text-text prose-p:text-text-muted prose-li:text-text-muted prose-strong:text-text prose-a:text-accent">
         <h2>What this is</h2>
         <p>
-          Mandate is an internal-style fund manager tool. This page describes
+          Devil&apos;s Advocate is an internal-style fund manager tool. This page describes
           what data the application collects, why, and how to remove it. If
           anything here is unclear, contact the operator listed below.
         </p>

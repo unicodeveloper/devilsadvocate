@@ -46,7 +46,7 @@ export default async function NewMemoPage() {
           New memo
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          Submit a stock or fund. Mandate will challenge your thesis using
+          Submit a stock or fund. Devil&apos;s Advocate will challenge your thesis using
           live research, peer data, House View rules, and (optionally) any
           broker reports you attach at run time.
         </p>

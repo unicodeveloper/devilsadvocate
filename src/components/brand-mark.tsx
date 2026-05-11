@@ -1,11 +1,9 @@
 /**
- * Brand mark — "MD+" wordmark.
+ * Brand mark — "DA" wordmark.
  *
  * Typographic-only design: the brand is rendered using actual IBM Plex Sans
- * glyphs (not paths), at a bold weight with tight tracking. The "+" suffix
- * follows the modern brand convention (Apple TV+, Disney+, ESPN+) that
- * signals a premium / extended tier — fitting for an AI CIO that adds
- * institutional rigor on top of the analyst's work.
+ * glyphs (not paths), at a bold weight with tight tracking — a clean two-
+ * letter monogram for Devil's Advocate.
  *
  * Renders correctly both inside `next/og` `ImageResponse` (where Satori
  * rasterizes the JSX to PNG) and as a regular React component (DOM).
@@ -47,9 +45,9 @@ export function BrandMark({
   className,
 }: BrandMarkProps) {
   const radiusPx = size * Math.max(0, Math.min(0.5, radius));
-  // Tuned so "MD+" fills the frame visually without crowding the edges.
-  const fontSize = size * 0.5;
-  const letterSpacing = -size * 0.045;
+  // Tuned so "DA" fills the frame visually without crowding the edges.
+  const fontSize = size * 0.6;
+  const letterSpacing = -size * 0.03;
 
   const textStyle = {
     fontFamily: "IBM Plex Sans, sans-serif",
@@ -93,12 +91,12 @@ export function BrandMark({
             zIndex: 0,
           }}
         >
-          MD+
+          DA
         </div>
       ) : null}
 
-      {/* Crisp MD+ */}
-      <div style={{ ...textStyle, position: "relative", zIndex: 1 }}>MD+</div>
+      {/* Crisp DA */}
+      <div style={{ ...textStyle, position: "relative", zIndex: 1 }}>DA</div>
 
       {/* Hairline frame border */}
       {background && frameBorder ? (

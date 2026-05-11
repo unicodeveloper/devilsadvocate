@@ -21,7 +21,7 @@ import type {
 import { ENGINE_VERSION } from "./types";
 import { loadEnabledRules } from "./rules";
 
-const ENGINE_MODEL = "mandate/orchestrator";
+const ENGINE_MODEL = "devils-advocate/orchestrator";
 const PROMPT_HASH = createHash("sha256")
   .update(`engine:${ENGINE_VERSION}:builtin-v1`)
   .digest("hex")

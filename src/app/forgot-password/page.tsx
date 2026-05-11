@@ -5,9 +5,9 @@ import { sendPasswordResetEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
 
 export const metadata = {
-  title: "Forgot password · Mandate",
+  title: "Forgot password · Devil's Advocate",
   description:
-    "Reset your Mandate password. We'll email a one-time link if your account is on file.",
+    "Reset your Devil's Advocate password. We'll email a one-time link if your account is on file.",
   alternates: { canonical: "/forgot-password" },
   robots: { index: false, follow: false },
 };

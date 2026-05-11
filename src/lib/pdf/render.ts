@@ -15,7 +15,7 @@ type PdfInput = {
 
 const PRINT_CSS = `
 @page { size: A4; margin: 18mm 16mm 22mm 16mm; }
-@page { @bottom-center { content: counter(page) " · Mandate Investment Memo"; font-size: 8pt; color: #737373; } }
+@page { @bottom-center { content: counter(page) " · Devil's Advocate Investment Memo"; font-size: 8pt; color: #737373; } }
 * { box-sizing: border-box; }
 html, body {
   margin: 0;

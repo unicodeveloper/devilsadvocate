@@ -17,7 +17,7 @@ function getFromAddress(): string {
   // test sender — works without verification but Resend rate-limits it).
   return (
     process.env.RESEND_FROM_EMAIL ??
-    `${SITE.shortName} <onboarding@resend.dev>`
+    `${SITE.name} <onboarding@resend.dev>`
   );
 }
 

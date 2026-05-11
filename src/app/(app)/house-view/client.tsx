@@ -296,7 +296,7 @@ function Header({
             ) : null}
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-            Source of truth for Mandate. Every memo run evaluates against the
+            Source of truth for Devil&apos;s Advocate. Every memo run evaluates against the
             most recent saved version. Edits create immutable version snapshots.
           </p>
         </div>

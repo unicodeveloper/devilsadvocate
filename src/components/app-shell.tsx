@@ -76,7 +76,7 @@ export function AppShell({
               href="/memos"
               className="text-sm font-semibold tracking-tight text-text transition-all hover:[text-shadow:0_0_24px_var(--accent-glow)]"
             >
-              Mandate
+              Devil&apos;s Advocate
             </Link>
             {/* Desktop nav */}
             <nav

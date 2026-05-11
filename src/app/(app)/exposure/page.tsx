@@ -5,7 +5,6 @@ import {
   aggregateExposureByTickerList,
   getIssuerGroupWithMembers,
   listAllSectorsInUse,
-  listAllTickersInUse,
   listIssuerGroupsWithCounts,
   type ExposureResult,
 } from "@/lib/funds";
@@ -38,10 +37,9 @@ export default async function ExposurePage({
   const q = sp.q ?? "";
   const id = sp.id ?? "";
 
-  const [sectors, groups, tickers] = await Promise.all([
+  const [sectors, groups] = await Promise.all([
     listAllSectorsInUse(),
     listIssuerGroupsWithCounts(),
-    listAllTickersInUse(),
   ]);
 
   let result: ExposureResult | null = null;
@@ -89,7 +87,6 @@ export default async function ExposurePage({
           name: g.name,
           memberCount: g.memberCount,
         }))}
-        knownTickers={tickers.map((t) => ({ ticker: t.ticker, name: t.name }))}
       />
 
       {result ? (

@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
 
 export const metadata = {
-  title: "Sign in · Mandate",
+  title: "Sign in · Devil's Advocate",
   description:
-    "Sign in to Mandate — your AI CIO. Stress-tests every investment thesis against your firm's mandate before IC.",
+    "Sign in to Devil's Advocate — your AI CIO. Stress-tests every investment thesis against your firm's mandate before IC.",
   alternates: { canonical: "/login" },
 };
 
@@ -45,7 +45,7 @@ export default async function LoginPage({
             className="inline-block h-6 w-6 rounded bg-accent shadow-[0_0_24px_var(--accent-soft)]"
           />
           <span className="text-base font-semibold tracking-tight text-text">
-            Mandate
+            Devil&apos;s Advocate
           </span>
         </div>
         <div className="mb-6">

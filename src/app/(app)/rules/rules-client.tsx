@@ -104,7 +104,7 @@ export function RulesClient({
 
       <Section
         title="Built-in rules"
-        subtitle="Ship with Mandate. Disable any you don't want enforced."
+        subtitle="Ship with Devil's Advocate. Disable any you don't want enforced."
       >
         <ul className="flex flex-col gap-2">
           {builtIn.map((r) => (

@@ -9,7 +9,7 @@ import { houseViewVersions, users } from "./db/schema";
  */
 const PLACEHOLDER = `# House View
 
-The firm-wide one-pager. Edited by the Fund Manager. Mandate treats this as
+The firm-wide one-pager. Edited by the Fund Manager. Devil's Advocate treats this as
 the **source of truth** — when broker reports or peer signals contradict it,
 the engine flags the divergence rather than overriding.
 

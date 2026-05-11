@@ -121,7 +121,7 @@ export default async function OpengraphImage() {
               maxWidth: 760,
             }}
           >
-            Multi-agent debate. House View overlay. Binding Mandate review.
+            Multi-agent debate. House View overlay. Binding Devil&apos;s Advocate review.
           </div>
         </div>
 
@@ -155,7 +155,7 @@ export default async function OpengraphImage() {
                 opacity: 0.4,
               }}
             />
-            <span>Mandate · Devil&apos;s Advocate</span>
+            <span>{SITE.name} · {SITE.titleSuffix}</span>
           </div>
         </div>
       </div>

@@ -6,8 +6,8 @@ import {
 } from "@/lib/password-reset";
 
 export const metadata = {
-  title: "Reset password · Mandate",
-  description: "Set a new password for your Mandate account.",
+  title: "Reset password · Devil's Advocate",
+  description: "Set a new password for your Devil's Advocate account.",
   alternates: { canonical: "/reset-password" },
   robots: { index: false, follow: false },
 };

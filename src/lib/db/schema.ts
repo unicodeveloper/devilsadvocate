@@ -173,7 +173,7 @@ export const issuerGroupMembers = sqliteTable("issuer_group_members", {
 });
 
 // ============================================================================
-// CRITIC ENGINE — Mandate as the AI CIO reviewer
+// CRITIC ENGINE — Devil's Advocate as the AI CIO reviewer
 // ============================================================================
 
 /**

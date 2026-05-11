@@ -1,8 +1,8 @@
-# Mandate
+# Devil's Advocate
 
 **Your AI CIO. Stress-tests every thesis against your mandate before IC.**
 
-Mandate is an open-source research engine for fund managers. You sign in, write a thesis (stock or fund), and Mandate plays the role of a relentless Chief Investment Officer — challenging your assumptions with broker reports, peer signals, House View rules, and macro data, then issuing a binding verdict before the memo can ship to the Investment Committee.
+Devil's Advocate is an open-source research engine for fund managers. You sign in, write a thesis (stock or fund), and Devil's Advocate plays the role of a relentless Chief Investment Officer — challenging your assumptions with broker reports, peer signals, House View rules, and macro data, then issuing a binding verdict before the memo can ship to the Investment Committee.
 
 The product premise is **automated skepticism**. The system doesn't just fetch data; it uses that data to question your conclusions. When the bear case is stronger than your bull case, you'll know — and so will the IC.
 
@@ -12,12 +12,12 @@ The product premise is **automated skepticism**. The system doesn't just fetch d
 
 Fund managers spend hours stitching together broker reports, private peer data, regulatory filings, and macro indicators just to vet a single thesis. Then they walk into IC and discover a blind spot anyway.
 
-Mandate compresses that loop:
+Devil's Advocate compresses that loop:
 
 1. You write a thesis.
 2. The engine pulls research, runs an adversarial review (bull, bear, House View checker, synthesizer), and lists every contradiction with citations.
 3. You address each objection inline (resolve, dispute, or won't-fix), or revise the memo.
-4. Mandate re-reviews. Loop until the verdict is **Approved** — then the IC PDF is one click away.
+4. Devil's Advocate re-reviews. Loop until the verdict is **Approved** — then the IC PDF is one click away.
 
 Built for solo fund managers and small investment teams. Useful even with one user — the AI plays the CIO seat without one needing to exist.
 
@@ -34,7 +34,7 @@ Draft → Stress-tested → In Review → Changes Requested → Approved
 
 - **Draft** — You're authoring the thesis (stock memo or fund memo).
 - **Stress-tested** — You've run an advisory devil's-advocate pass; results are inline notes, not gating.
-- **In Review** — Mandate is running the binding two-stage gate.
+- **In Review** — Devil's Advocate is running the binding two-stage gate.
 - **Changes Requested** — Verdict came back with objections you must address.
 - **Approved / Rejected** — Final verdict. Approved memos generate an IC PDF; rejected memos require revising the underlying premise.
 
@@ -110,8 +110,8 @@ TipTap                               ← rich-text editor
 ### Steps
 
 ```bash
-git clone <your-fork-url> mandate
-cd mandate
+git clone <your-fork-url> devils-advocate
+cd devils-advocate
 npm install
 cp .env.example .env.local
 # Edit .env.local — paste in OPENAI_API_KEY, VALYU_API_KEY, AUTH_SECRET
@@ -136,7 +136,7 @@ Start the dev server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), sign in with `fm@mandate.local` / `changeme` (or whatever you set in `.env.local`), and you're in.
+Open [http://localhost:3000](http://localhost:3000), sign in with `fm@devilsadvocate.local` / `changeme` (or whatever you set in `.env.local`), and you're in.
 
 ---
 
@@ -148,7 +148,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `fm@mandate.lo
 | `VALYU_API_KEY` | yes | — | Deep research, stock search, peer dossiers |
 | `AUTH_SECRET` | yes | — | NextAuth session encryption |
 | `DATABASE_URL` | no | `./data/sqlite.db` (local) / `/data/sqlite.db` (Docker) | SQLite file path |
-| `SEED_FM_EMAIL` | no | `fm@mandate.local` | Initial fund-manager account |
+| `SEED_FM_EMAIL` | no | `fm@devilsadvocate.local` | Initial fund-manager account |
 | `SEED_FM_PASSWORD` | no | `changeme` | Initial password — **change before deploying** |
 | `HOUSE_VIEW_PATH` | no | `./data/house-view.md` | Path to the firm's House View markdown |
 
@@ -171,7 +171,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in with `fm@mandate.lo
 
 ## Deploying to Railway
 
-Mandate ships with a `Dockerfile` and `railway.json` ready to go. The image bundles Playwright + Chromium for PDF rendering and uses a `/data` volume for SQLite persistence.
+Devil's Advocate ships with a `Dockerfile` and `railway.json` ready to go. The image bundles Playwright + Chromium for PDF rendering and uses a `/data` volume for SQLite persistence.
 
 ### One-time setup
 

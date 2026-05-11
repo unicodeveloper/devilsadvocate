@@ -35,7 +35,7 @@ const COLUMNS: Column[] = [
     key: "in_review",
     label: "In Review",
     tone: "warning",
-    description: "Mandate is evaluating",
+    description: "Devil's Advocate is evaluating",
   },
   {
     key: "changes_requested",
@@ -96,7 +96,7 @@ export default async function ReviewPage() {
       <PageHeader
         eyebrow="Lifecycle"
         title="Review"
-        description="Lifecycle of every memo. Mandate runs the binding review; you author and respond."
+        description="Lifecycle of every memo. Devil's Advocate runs the binding review; you author and respond."
       />
 
       {userMemos.length === 0 ? (
@@ -206,7 +206,7 @@ function ActivityStream({ activity }: { activity: ActivityRow[] }) {
   return (
     <section className="rounded-lg border border-border bg-surface p-4">
       <h2 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-text-subtle">
-        Recent Mandate activity
+        Recent Devil&apos;s Advocate activity
       </h2>
       <ul className="flex flex-col gap-2 text-xs">
         {activity.map((a, i) => (

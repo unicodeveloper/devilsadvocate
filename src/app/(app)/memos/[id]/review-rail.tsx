@@ -30,7 +30,7 @@ type RailProps = {
   lastRunFinishedAt: Date | null;
 };
 
-const ENGINE_LABEL = "Mandate · v1.0.0";
+const ENGINE_LABEL = "Devil's Advocate · v1.0.0";
 type BadgeTone = NonNullable<ComponentProps<typeof Badge>["tone"]>;
 
 export function ReviewRail(props: RailProps) {
@@ -80,7 +80,7 @@ function DraftBlock({ hasCompletedRun }: RailProps) {
       <RailHeader label="Draft" tone="neutral" subtitle="Not yet stress-tested" />
       <p className="text-xs leading-5 text-text-muted">
         Run a <span className="font-medium text-text">stress-test</span> first
-        — Mandate reuses its outputs for binding review.
+        — Devil&apos;s Advocate reuses its outputs for binding review.
       </p>
       <ul className="flex flex-col gap-1.5">
         <ChecklistItem ok={false} label="Stress-test the thesis" />
@@ -100,7 +100,7 @@ function StressTestedBlock(props: RailProps) {
           {props.bearFindingCount} advisory note
           {props.bearFindingCount === 1 ? "" : "s"}
         </span>
-        . Submitting now runs the binding Mandate review:
+        . Submitting now runs the binding Devil&apos;s Advocate review:
       </p>
       <ul className="flex flex-col gap-1 text-[11px] leading-5 text-text-subtle">
         <li className="flex items-start gap-2">
@@ -126,7 +126,7 @@ function InReviewBlock(props: RailProps) {
     <>
       <RailHeader label="Reviewing…" tone="warning" subtitle={ENGINE_LABEL} />
       <p className="text-xs leading-5 text-text-muted">
-        Mandate is evaluating this memo. This usually takes a few seconds.
+        Devil&apos;s Advocate is evaluating this memo. This usually takes a few seconds.
       </p>
       <ul className="flex flex-col gap-1 text-[11px] leading-5 text-text-subtle">
         <li className="flex items-start gap-2">
@@ -271,7 +271,7 @@ function LegacyDecisionBlock({
     <>
       <RailHeader label={label} tone={tone} subtitle="Legacy decision" />
       <p className="text-xs leading-5 text-text-muted">
-        This memo was decided before Mandate was wired up. Run a fresh review
+        This memo was decided before Devil&apos;s Advocate was wired up. Run a fresh review
         to migrate it.
       </p>
       <SubmitButton memoId={memoId} label="Run review now" />
@@ -382,7 +382,7 @@ function ResubmitButton({
               Resubmit for binding review?
             </h2>
             <p className="mt-2 text-xs leading-5 text-text-muted">
-              Mandate re-evaluates the latest stress-test output, not your
+              Devil&apos;s Advocate re-evaluates the latest stress-test output, not your
               Resolved/Disputed checkboxes. If the stress-test hasn&apos;t been
               re-run, expect similar objections.
             </p>
@@ -409,7 +409,7 @@ function ResubmitButton({
                 <span className="font-medium">
                   ⚠ Stress-test hasn&apos;t been re-run since the last review.
                 </span>{" "}
-                Mandate will see identical inputs and is likely to raise the
+                Devil&apos;s Advocate will see identical inputs and is likely to raise the
                 same objections. Consider editing the memo and re-running the
                 stress-test before resubmitting.
               </div>
@@ -434,7 +434,7 @@ function ResubmitButton({
                 disabled={isPending}
                 loading={isPending}
               >
-                {isPending ? "Running review…" : "Resubmit (re-run Mandate)"}
+                {isPending ? "Running review…" : "Resubmit (re-run review)"}
               </Button>
             </div>
           </div>

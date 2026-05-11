@@ -8,7 +8,7 @@ const FALLBACK_URL = "http://localhost:3000";
 /**
  * The canonical, public URL of the deployed app. Used for `metadataBase`,
  * absolute OG image URLs, and any social-share links. Set
- * `NEXT_PUBLIC_APP_URL` in production (e.g. `https://mandate.up.railway.app`).
+ * `NEXT_PUBLIC_APP_URL` in production (e.g. `https://devils-advocate.up.railway.app`).
  */
 export function siteUrl(): string {
   const fromEnv =
@@ -20,12 +20,17 @@ export function siteUrl(): string {
 }
 
 export const SITE = {
-  name: "Mandate",
-  shortName: "Mandate",
+  // Public brand name. The product and the AI review engine share one
+  // identity: "Devil's Advocate".
+  name: "Devil's Advocate",
+  // Short form used in PWA manifest and tight contexts. Truncates well
+  // on Android home-screen labels.
+  shortName: "Advocate",
   // Used as the trailing segment of `<title>` and in OG title-template.
-  titleSuffix: "Devil's Advocate",
+  // Reads as a product descriptor, not a brand suffix.
+  titleSuffix: "AI CIO",
   description:
-    "Your AI CIO. Stress-tests every investment thesis against your mandate before IC — multi-agent debate, House View overlay, binding Mandate review.",
+    "Your AI CIO. Stress-tests every investment thesis against your mandate before IC — multi-agent debate, House View overlay, binding Devil's Advocate review.",
   shortDescription:
     "AI CIO that stress-tests every investment thesis before IC.",
   keywords: [
@@ -35,7 +40,6 @@ export const SITE = {
     "stress test",
     "investment committee",
     "House View",
-    "Mandate",
     "Devil's Advocate",
   ],
   /** Brand colors — must match the CSS tokens in globals.css. */

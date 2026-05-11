@@ -140,7 +140,7 @@ export function ObjectionCard({ objection }: { objection: LoadedObjection }) {
             {objection.threads.map((t) => (
               <div key={t.id} className="flex gap-1.5">
                 <span className="font-medium text-text">
-                  {t.authorKind === "engine" ? "Mandate:" : "You:"}
+                  {t.authorKind === "engine" ? "Devil's Advocate:" : "You:"}
                 </span>
                 <span>{t.body}</span>
               </div>

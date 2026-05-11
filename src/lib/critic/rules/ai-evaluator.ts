@@ -98,7 +98,6 @@ export function aiRuleEvaluator(args: {
           "Memo to evaluate:",
           memoCtx,
         ].join("\n"),
-        temperature: 0.1,
       });
       if (!result.object.violated || result.object.objections.length === 0) {
         return [];

@@ -59,7 +59,6 @@ export async function synthesizer(
     schema: SynthesizedMemoSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.2,
   });
 
   // Strict citation enforcement on stress-test findings and consensus notes.

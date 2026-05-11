@@ -53,7 +53,6 @@ export async function fundHouseViewChecker(
     schema: FundHouseViewCheckerOutputSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.1,
   });
 
   return {

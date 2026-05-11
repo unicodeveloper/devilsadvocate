@@ -42,7 +42,6 @@ export async function houseViewChecker(
     schema: HouseViewCheckerOutputSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.1,
   });
 
   return {

@@ -78,11 +78,63 @@ class ValyuOAuthClient {
     });
   }
 
+  /**
+   * Valyu `/v1/answer` is an SSE endpoint — even non-streaming consumers
+   * get `data: {...}` chunks. We accumulate the stream client-side and
+   * return the same shape the `valyu-js` SDK produces, so call-sites that
+   * pattern-match on `success`/`contents`/`search_results` keep working
+   * unchanged across modes.
+   */
   async answer(query: string, options: Record<string, unknown> = {}) {
-    return this.call("/v1/answer", "POST", {
+    const body = {
       query,
       ...(toSnakeCase(options) as Record<string, unknown>),
+    };
+    const proxyUrl = `${VALYU_APP_URL}/api/oauth/proxy`;
+    const res = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({ path: "/v1/answer", method: "POST", body }),
     });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      if (res.status === 402) {
+        return {
+          success: false,
+          error: "Insufficient Valyu credits. Top up your account to continue.",
+        };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          success: false,
+          error: "Valyu session expired. Please sign in again.",
+        };
+      }
+      return {
+        success: false,
+        error: `Valyu OAuth proxy returned ${res.status}: ${text || "no body"}`,
+      };
+    }
+
+    // Read raw body and parse. Some proxies relay SSE verbatim, others
+    // buffer it into JSON. Handle both.
+    const text = await res.text();
+    const contentType = res.headers.get("content-type") ?? "";
+    const looksLikeJson =
+      !contentType.includes("event-stream") &&
+      (text.trimStart().startsWith("{") || text.trimStart().startsWith("["));
+    if (looksLikeJson) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        // fall through to SSE
+      }
+    }
+    return parseAnswerSse(text, body.query as string);
   }
 
   private async call(
@@ -119,6 +171,81 @@ class ValyuOAuthClient {
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Accumulate a Valyu `/v1/answer` SSE response into the same shape the
+ * `valyu-js` SDK returns from `fetchAnswer`. Mirrors the SDK's logic:
+ *
+ *   - chunks with `parsed.choices[0].delta.content` → append to `contents`
+ *   - chunks with `parsed.search_results` (without `success`) → accumulate
+ *   - chunk with `parsed.success` (true|false) → final metadata
+ *   - `data: [DONE]` → end of stream
+ *
+ * Returns `{ success: true, contents, search_results, ... }` on success
+ * matching the SDK's response, or `{ success: false, error }` if no
+ * success-metadata chunk arrived.
+ */
+function parseAnswerSse(text: string, query: string): Record<string, unknown> {
+  let fullContent = "";
+  let searchResults: unknown[] = [];
+  let finalMetadata: Record<string, unknown> | null = null;
+
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.replace(/\r$/, "");
+    if (!line.startsWith("data: ")) continue;
+    const dataStr = line.slice(6);
+    if (dataStr === "[DONE]") continue;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(dataStr) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    if (
+      Array.isArray(parsed.search_results) &&
+      parsed.success === undefined
+    ) {
+      searchResults = [
+        ...searchResults,
+        ...(parsed.search_results as unknown[]),
+      ];
+    } else if (Array.isArray(parsed.choices)) {
+      const choice = (parsed.choices as Array<Record<string, unknown>>)[0];
+      const delta = choice?.delta as { content?: string } | undefined;
+      if (delta?.content) fullContent += delta.content;
+    } else if (parsed.success !== undefined) {
+      finalMetadata = parsed;
+    }
+  }
+
+  if (finalMetadata?.success) {
+    const meta = finalMetadata;
+    return {
+      success: true,
+      tx_id: meta.tx_id ?? "",
+      original_query: meta.original_query ?? query,
+      contents: meta.contents ?? fullContent ?? "",
+      search_results: meta.search_results ?? searchResults,
+      search_metadata: meta.search_metadata ?? {
+        tx_ids: [],
+        number_of_results: 0,
+        total_characters: 0,
+      },
+      ai_usage: meta.ai_usage ?? { input_tokens: 0, output_tokens: 0 },
+      cost: meta.cost ?? {
+        total_deduction_dollars: 0,
+        search_deduction_dollars: 0,
+        ai_deduction_dollars: 0,
+      },
+    };
+  }
+  return {
+    success: false,
+    error:
+      (finalMetadata?.error as string | undefined) ??
+      "Valyu answer stream ended without a success chunk",
+  };
 }
 
 /**

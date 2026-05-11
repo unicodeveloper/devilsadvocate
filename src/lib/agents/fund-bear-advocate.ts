@@ -142,7 +142,6 @@ export async function fundBearAdvocate(
     schema: FundBearAdvocateOutputSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.3,
   });
 
   const cleaned = {

@@ -92,7 +92,6 @@ export async function fundBullAdvocate(
     schema: FundBullAdvocateOutputSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.2,
   });
 
   const cleaned = {

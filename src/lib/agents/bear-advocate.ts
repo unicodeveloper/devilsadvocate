@@ -128,7 +128,6 @@ export async function bearAdvocate(
     schema: BearAdvocateOutputSchema,
     system: SYSTEM,
     prompt: userPrompt,
-    temperature: 0.3,
   });
 
   const cleaned = {

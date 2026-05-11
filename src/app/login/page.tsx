@@ -81,6 +81,12 @@ export default async function LoginPage({
               className={INPUT_CLS}
             />
           </Field>
+          <a
+            href="/forgot-password"
+            className="-mt-2 self-end text-[11px] text-text-muted transition-colors hover:text-text"
+          >
+            Forgot password?
+          </a>
           {error ? (
             <p
               role="alert"

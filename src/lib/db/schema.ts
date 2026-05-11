@@ -21,6 +21,25 @@ export const users = sqliteTable("users", {
   createdAt: timestamp("created_at"),
 });
 
+/**
+ * Password reset tokens. Single-use; expires within ~1 hour. We never
+ * store the raw token — only its SHA-256 hash — so a DB read can't be
+ * replayed to take over an account.
+ */
+export const passwordResetTokens = sqliteTable("password_reset_tokens", {
+  id: id(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp_ms" }),
+  createdAt: timestamp("created_at"),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
 export const houseViewVersions = sqliteTable("house_view_versions", {
   id: id(),
   content: text("content").notNull(),

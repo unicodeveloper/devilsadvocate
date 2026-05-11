@@ -50,6 +50,13 @@
       "when": 1778435000000,
       "tag": "0006_rename_inr_to_native",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1778535000000,
+      "tag": "0007_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/components/theme-provider";
 import { SITE, siteUrl } from "@/lib/site";
@@ -129,11 +130,15 @@ function structuredData() {
   return JSON.stringify({ "@context": "https://schema.org", "@graph": graph });
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Pulled from middleware.ts. Allows our inline scripts to satisfy the
+  // nonce-based CSP without resorting to 'unsafe-inline'.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="en"
@@ -141,8 +146,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+        <script
+          nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: structuredData() }}
         />

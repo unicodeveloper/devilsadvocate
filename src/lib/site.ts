@@ -26,9 +26,13 @@ export const SITE = {
   // Short form used in PWA manifest and tight contexts. Truncates well
   // on Android home-screen labels.
   shortName: "Advocate",
-  // Used as the trailing segment of `<title>` and in OG title-template.
-  // Reads as a product descriptor, not a brand suffix.
+  // Short product descriptor. Rendered on the OG image canvas and used as
+  // the trailing segment of subpage titles via `title.template`.
   titleSuffix: "AI CIO",
+  // Full meta title used for `<title>`, `og:title`, and `twitter:title`.
+  // Sized to the 50–60 char window social previewers reward; shorter
+  // titles get penalised as low-signal.
+  metaTitle: "Devil's Advocate · AI CIO that stress-tests every thesis",
   description:
     "Your AI CIO. Stress-tests every investment thesis against your mandate before IC — multi-agent debate, House View overlay, binding Devil's Advocate review.",
   shortDescription:

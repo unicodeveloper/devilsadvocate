@@ -23,7 +23,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {
-    default: `${SITE.name} · ${SITE.titleSuffix}`,
+    default: SITE.metaTitle,
     template: `%s · ${SITE.name}`,
   },
   description: SITE.description,
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE.name,
-    title: `${SITE.name} · ${SITE.titleSuffix}`,
+    title: SITE.metaTitle,
     description: SITE.description,
     url: siteUrl(),
     locale: SITE.locale,
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} · ${SITE.titleSuffix}`,
+    title: SITE.metaTitle,
     description: SITE.description,
     site: SITE.twitter,
     creator: SITE.twitter,

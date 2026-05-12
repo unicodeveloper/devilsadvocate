@@ -57,6 +57,10 @@ secrets.*
 /playwright-report/
 /playwright/.cache/
 
+# source recording (compressed copy lives at assets/demo.mp4)
+/devilsadvocaterecording.mp4
+/video/
+
 Dockerfile
 
 docs/

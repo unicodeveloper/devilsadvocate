@@ -2,6 +2,14 @@
 
 **Your AI CIO. Stress-tests every thesis against your mandate before IC.**
 
+## Demo
+
+<video src="https://github.com/unicodeveloper/devilsadvocate/raw/main/assets/demo.mp4" controls width="100%"></video>
+
+<sub><a href="https://github.com/unicodeveloper/devilsadvocate/raw/main/assets/demo.mp4">Watch the demo</a> if the player above doesn't load inline.</sub>
+
+---
+
 Devil's Advocate is an open-source research engine for fund managers. You sign in, write a thesis (stock or fund), and Devil's Advocate plays the role of a relentless Chief Investment Officer — challenging your assumptions with broker reports, peer signals, House View rules, and macro data, then issuing a binding verdict before the memo can ship to the Investment Committee.
 
 The product premise is **automated skepticism**. The system doesn't just fetch data; it uses that data to question your conclusions. When the bear case is stronger than your bull case, you'll know — and so will the IC.

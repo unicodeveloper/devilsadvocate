@@ -4,9 +4,7 @@
 
 ## Demo
 
-<video src="https://github.com/unicodeveloper/devilsadvocate/raw/main/assets/demo.mp4" controls width="100%"></video>
-
-<sub><a href="https://github.com/unicodeveloper/devilsadvocate/raw/main/assets/demo.mp4">Watch the demo</a> if the player above doesn't load inline.</sub>
+https://github.com/user-attachments/assets/7ab5aaa4-f7cb-4630-9a5b-16ae912690de
 
 ---
 

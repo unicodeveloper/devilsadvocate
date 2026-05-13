@@ -278,6 +278,7 @@ export default async function MemoDetailPage({
             </h2>
             {isOwner ? (
               <RunPanel
+                key={memo.id}
                 memoId={memo.id}
                 entityType={memo.entityType}
                 initialMemo={synthesized}

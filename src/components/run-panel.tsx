@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { RunEvent } from "@/lib/agents/orchestrator";
 import type {
@@ -109,6 +109,79 @@ export function RunPanel({
     [onPickFiles],
   );
 
+  const applyEvent = useCallback(
+    (event: RunEvent) => {
+      switch (event.type) {
+        case "agent_started":
+          setAgentStates((s) => ({
+            ...s,
+            [event.agent]: { state: "running" },
+          }));
+          break;
+        case "agent_completed":
+          setAgentStates((s) => ({
+            ...s,
+            [event.agent]: {
+              state: "completed",
+              durationMs: event.durationMs,
+            },
+          }));
+          break;
+        case "agent_failed":
+          setAgentStates((s) => ({
+            ...s,
+            [event.agent]: { state: "failed", error: event.error },
+          }));
+          break;
+        case "synthesis_completed":
+          setMemo(event.memo);
+          router.refresh();
+          break;
+        case "run_failed":
+          setRunError(event.error);
+          break;
+        default:
+          break;
+      }
+    },
+    [router],
+  );
+
+  const consumeStream = useCallback(
+    async (body: ReadableStream<Uint8Array>) => {
+      const reader = body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: RunEvent;
+          try {
+            event = JSON.parse(line) as RunEvent;
+          } catch {
+            continue;
+          }
+          applyEvent(event);
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          applyEvent(JSON.parse(buffer) as RunEvent);
+        } catch {
+          // ignore trailing non-JSON
+        }
+      }
+    },
+    [applyEvent],
+  );
+
   async function startRun() {
     setRunning(true);
     setRunError(null);
@@ -142,73 +215,59 @@ export function RunPanel({
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        let event: RunEvent;
-        try {
-          event = JSON.parse(line) as RunEvent;
-        } catch {
-          continue;
-        }
-        applyEvent(event);
-      }
-    }
-
-    if (buffer.trim()) {
-      try {
-        applyEvent(JSON.parse(buffer) as RunEvent);
-      } catch {
-        // ignore trailing non-JSON
-      }
-    }
-
+    await consumeStream(res.body);
     setRunning(false);
   }
 
-  function applyEvent(event: RunEvent) {
-    switch (event.type) {
-      case "agent_started":
-        setAgentStates((s) => ({
-          ...s,
-          [event.agent]: { state: "running" },
-        }));
-        break;
-      case "agent_completed":
-        setAgentStates((s) => ({
-          ...s,
-          [event.agent]: {
-            state: "completed",
-            durationMs: event.durationMs,
-          },
-        }));
-        break;
-      case "agent_failed":
-        setAgentStates((s) => ({
-          ...s,
-          [event.agent]: { state: "failed", error: event.error },
-        }));
-        break;
-      case "synthesis_completed":
-        setMemo(event.memo);
-        router.refresh();
-        break;
-      case "run_failed":
-        setRunError(event.error);
-        break;
-      default:
-        break;
-    }
-  }
+  // On mount, check whether a stress-test is already in flight for this memo
+  // (e.g. the user kicked one off, navigated away, and just came back). If
+  // so, attach to its event stream and pick up live progress without
+  // restarting the run.
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      let res: Response;
+      try {
+        res = await fetch(`/api/memos/${memoId}/run`, {
+          method: "GET",
+          signal: controller.signal,
+        });
+      } catch {
+        return; // network blip or unmount; nothing to do
+      }
+      if (cancelled || res.status === 204 || !res.body) return;
+      if (!res.ok) return;
+
+      setRunning(true);
+      setRunError(null);
+      setAgentStates({
+        bull_advocate: { state: "idle" },
+        bear_advocate: { state: "idle" },
+        house_view_checker: { state: "idle" },
+        synthesizer: { state: "idle" },
+      });
+      try {
+        await consumeStream(res.body);
+      } catch (err) {
+        // Component unmounted mid-stream — controller.abort() makes
+        // reader.read() throw. Not an error from the user's POV.
+        if (cancelled || (err instanceof Error && err.name === "AbortError")) {
+          return;
+        }
+        throw err;
+      } finally {
+        if (!cancelled) setRunning(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+    // memoId is stable per page; consumeStream is stable via useCallback
+  }, [memoId, consumeStream]);
 
   return (
     <div className="flex flex-col gap-5">

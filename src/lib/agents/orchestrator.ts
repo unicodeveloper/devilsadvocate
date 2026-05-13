@@ -662,30 +662,3 @@ async function* failRun(
   yield { type: "run_failed", runId, error: message };
 }
 
-export function eventsToNdjsonStream(
-  events: AsyncGenerator<RunEvent, void, unknown>,
-): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const event of events) {
-          controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: "run_failed",
-              runId: "",
-              error: message,
-            }) + "\n",
-          ),
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-}

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import type { RunEvent } from "@/lib/agents/orchestrator";
 import type {
   FundSynthesizedMemo,
+  PrivateCompanySynthesizedMemo,
   SynthesizedMemo,
 } from "@/lib/agents/types";
 import { MemoView } from "./memo-view";
 import { FundMemoView } from "./fund-memo-view";
+import { PrivateCompanyMemoView } from "./private-company-memo-view";
 import { Button } from "./ui";
 import { cn } from "./ui/cn";
 
@@ -47,8 +49,12 @@ export function RunPanel({
   initialMemo,
 }: {
   memoId: string;
-  entityType: "stock" | "fund";
-  initialMemo: SynthesizedMemo | FundSynthesizedMemo | null;
+  entityType: "stock" | "fund" | "private_company";
+  initialMemo:
+    | SynthesizedMemo
+    | FundSynthesizedMemo
+    | PrivateCompanySynthesizedMemo
+    | null;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [running, setRunning] = useState(false);
@@ -61,7 +67,10 @@ export function RunPanel({
     synthesizer: { state: "idle" },
   });
   const [memo, setMemo] = useState<
-    SynthesizedMemo | FundSynthesizedMemo | null
+    | SynthesizedMemo
+    | FundSynthesizedMemo
+    | PrivateCompanySynthesizedMemo
+    | null
   >(initialMemo);
   const [runError, setRunError] = useState<string | null>(null);
   const dragRef = useRef<HTMLDivElement>(null);
@@ -221,7 +230,9 @@ export function RunPanel({
       >
         <UploadIcon className="text-text-subtle transition-colors group-hover:text-text-muted" />
         <p className="text-sm text-text">
-          Drop broker reports, IC memos, or any supporting PDFs.
+          {entityType === "private_company"
+            ? "Drop Pitch Decks, IC memos, or any supporting PDFs."
+            : "Drop broker reports, IC memos, or any supporting PDFs."}
         </p>
         <p className="text-[11px] text-text-subtle">
           Files stay in memory for this run only — never persisted.
@@ -367,6 +378,10 @@ export function RunPanel({
         <div className="border-t border-border pt-5">
           {entityType === "fund" ? (
             <FundMemoView memo={memo as FundSynthesizedMemo} />
+          ) : entityType === "private_company" ? (
+            <PrivateCompanyMemoView
+              memo={memo as PrivateCompanySynthesizedMemo}
+            />
           ) : (
             <MemoView memo={memo as SynthesizedMemo} />
           )}

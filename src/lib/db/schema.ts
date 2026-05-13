@@ -35,21 +35,53 @@ export const houseViewVersions = sqliteTable("house_view_versions", {
   updatedByUserId: text("updated_by_user_id")
     .notNull()
     .references(() => users.id),
+  // Structured private-company mandate fields. Used by the
+  // private-company House View Checker for mechanical kills
+  // ("check $250K exceeds mandate band") instead of relying on the LLM to
+  // parse intent from the prose mandate. Versioned with `content` so
+  // structured rules and the prose evolve together.
+  privateCheckSizeMinUsd: integer("private_check_size_min_usd"),
+  privateCheckSizeMaxUsd: integer("private_check_size_max_usd"),
+  // JSON arrays of allowed stages / sectors / geos. Stored as TEXT for
+  // SQLite simplicity; parsed at read time. Null = no restriction.
+  privateStageAllowlistJson: text("private_stage_allowlist_json"),
+  privateSectorAllowlistJson: text("private_sector_allowlist_json"),
+  privateSectorBlocklistJson: text("private_sector_blocklist_json"),
+  privateGeoAllowlistJson: text("private_geo_allowlist_json"),
   createdAt: timestamp("created_at"),
 });
 
 export const memos = sqliteTable("memos", {
   id: id(),
-  entityType: text("entity_type", { enum: ["stock", "fund"] })
+  entityType: text("entity_type", {
+    enum: ["stock", "fund", "private_company"],
+  })
     .notNull()
     .default("stock"),
-  // Stock-only fields (null for fund memos)
+  // Stock-only fields (null for fund / private_company memos)
   stockTicker: text("stock_ticker"),
   stockName: text("stock_name"),
   stockExchange: text("stock_exchange"),
   stockSector: text("stock_sector"),
-  // Fund-only field (null for stock memos)
+  // Fund-only field (null for stock / private_company memos)
   fundId: text("fund_id").references(() => funds.id, { onDelete: "set null" }),
+  // Private-company-only fields (null for stock / fund memos). Inline on
+  // memos (mirrors the stock pattern) — a private_companies table would
+  // be premature for an MVP that doesn't track portfolio-level state yet.
+  privateCompanyName: text("private_company_name"),
+  privateCompanyUrl: text("private_company_url"),
+  // JSON array of founder names. TEXT for SQLite simplicity; parsed at
+  // read time.
+  privateCompanyFoundersJson: text("private_company_founders_json"),
+  privateCompanyRoundStage: text("private_company_round_stage", {
+    enum: ["seed", "series_a", "series_b"],
+  }),
+  // USD amounts in whole dollars (no fractional cents — angels don't write
+  // checks at that resolution). Nullable: investor may run pre-decision.
+  privateCompanyCheckSizeUsd: integer("private_company_check_size_usd"),
+  privateCompanyPostMoneyUsd: integer("private_company_post_money_usd"),
+  privateCompanySector: text("private_company_sector"),
+  privateCompanyGeo: text("private_company_geo"),
   thesis: text("thesis").notNull(),
   areasOfConcern: text("areas_of_concern"),
   privatePeers: text("private_peers"),

@@ -9,6 +9,7 @@ import {
 } from "./db/schema";
 import type {
   FundSynthesizedMemo,
+  PrivateCompanySynthesizedMemo,
   SynthesizedMemo,
 } from "./agents/types";
 
@@ -68,6 +69,39 @@ export async function listExampleMemos(limit = 3) {
     )
     .orderBy(desc(memos.updatedAt))
     .limit(limit);
+}
+
+/**
+ * Onboarding-targeted example slice: every private-company demo plus the
+ * single most recent stock and fund demo. Returned in entity-type order
+ * (private → stock → fund) so the variety is visible at a glance instead
+ * of relying on natural recency ordering.
+ */
+export async function listBalancedExampleMemos() {
+  const seedEmail = process.env.SEED_FM_EMAIL ?? "demo@devilsadvocate.local";
+  const seedUser = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, seedEmail))
+    .limit(1);
+  if (seedUser.length === 0) return [];
+
+  const allDemos = await db
+    .select()
+    .from(memos)
+    .where(
+      and(
+        eq(memos.createdByUserId, seedUser[0].id),
+        ne(memos.status, "draft"),
+      ),
+    )
+    .orderBy(desc(memos.updatedAt));
+
+  const privates = allDemos.filter((m) => m.entityType === "private_company");
+  const oneStock = allDemos.find((m) => m.entityType === "stock");
+  const oneFund = allDemos.find((m) => m.entityType === "fund");
+
+  return [...privates, ...(oneStock ? [oneStock] : []), ...(oneFund ? [oneFund] : [])];
 }
 
 export async function listMemosForReview() {
@@ -176,6 +210,17 @@ export function parseFundSynthesizedMemo(
   if (!json) return null;
   try {
     return JSON.parse(json) as FundSynthesizedMemo;
+  } catch {
+    return null;
+  }
+}
+
+export function parsePrivateCompanySynthesizedMemo(
+  json: string | null,
+): PrivateCompanySynthesizedMemo | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as PrivateCompanySynthesizedMemo;
   } catch {
     return null;
   }

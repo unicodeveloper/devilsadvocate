@@ -9,6 +9,7 @@ import {
 import { getFundById, listHoldingsForFund } from "../funds";
 import { fetchSectorDossier } from "../sectors";
 import { fetchPrivatePeerDossier, parsePrivatePeers } from "../private-peers";
+import { fetchPrivateCompanyResearch } from "../private-company-research";
 import { bullAdvocate } from "./bull-advocate";
 import { bearAdvocate } from "./bear-advocate";
 import { houseViewChecker } from "./house-view-checker";
@@ -17,6 +18,13 @@ import { fundBullAdvocate } from "./fund-bull-advocate";
 import { fundBearAdvocate } from "./fund-bear-advocate";
 import { fundHouseViewChecker } from "./fund-house-view-checker";
 import { fundSynthesizer } from "./fund-synthesizer";
+import { privateCompanyBullAdvocate } from "./private-company-bull-advocate";
+import { privateCompanyBearAdvocate } from "./private-company-bear-advocate";
+import {
+  privateCompanyHouseViewChecker,
+  type StructuredMandate,
+} from "./private-company-house-view-checker";
+import { privateCompanySynthesizer } from "./private-company-synthesizer";
 import type { AgentAudit, ValyuFileAttachment } from "./shared";
 import type {
   BearAdvocateOutput,
@@ -26,6 +34,10 @@ import type {
   FundHouseViewCheckerOutput,
   FundSynthesizedMemo,
   HouseViewCheckerOutput,
+  PrivateCompanyBearAdvocateOutput,
+  PrivateCompanyBullAdvocateOutput,
+  PrivateCompanyHouseViewCheckerOutput,
+  PrivateCompanySynthesizedMemo,
   SynthesizedMemo,
 } from "./types";
 
@@ -53,8 +65,11 @@ export type RunEvent =
   | { type: "agent_failed"; agent: AgentAudit["agentName"]; error: string }
   | {
       type: "synthesis_completed";
-      entityType: "stock" | "fund";
-      memo: SynthesizedMemo | FundSynthesizedMemo;
+      entityType: "stock" | "fund" | "private_company";
+      memo:
+        | SynthesizedMemo
+        | FundSynthesizedMemo
+        | PrivateCompanySynthesizedMemo;
     }
   | { type: "run_completed"; runId: string }
   | { type: "run_failed"; runId: string; error: string };
@@ -112,6 +127,15 @@ export async function* runStressTest(
       runId: runRow.id,
       memoRow,
       hvContent,
+      attachments: input.attachments,
+      accessToken: input.accessToken,
+    });
+  } else if (memoRow.entityType === "private_company") {
+    yield* runPrivateCompanyStressTest({
+      runId: runRow.id,
+      memoRow,
+      hvContent,
+      hvVersion,
       attachments: input.attachments,
       accessToken: input.accessToken,
     });
@@ -415,6 +439,210 @@ async function* runFundStressTest({
     yield { type: "run_completed", runId };
   } catch (err) {
     yield* failRun(runId, err);
+  }
+}
+
+type RunPrivateCompanyInput = RunSubInput & {
+  /**
+   * Resolved HV version row — used to pull the structured private-co
+   * mandate fields. May be null if seeding failed; the run still works,
+   * just without mechanical mandate enforcement.
+   */
+  hvVersion: Awaited<ReturnType<typeof getLatestHouseViewVersion>>;
+};
+
+async function* runPrivateCompanyStressTest({
+  runId,
+  memoRow,
+  hvContent,
+  hvVersion,
+  accessToken,
+}: RunPrivateCompanyInput): AsyncGenerator<RunEvent, void, unknown> {
+  if (
+    !memoRow.privateCompanyName ||
+    !memoRow.privateCompanyUrl ||
+    !memoRow.privateCompanyRoundStage
+  ) {
+    yield {
+      type: "run_failed",
+      runId,
+      error: "Private-company memo missing required fields (name, url, stage)",
+    };
+    return;
+  }
+
+  const founders = parseFoundersJson(memoRow.privateCompanyFoundersJson);
+  if (founders.length === 0) {
+    yield {
+      type: "run_failed",
+      runId,
+      error: "Private-company memo missing founder names",
+    };
+    return;
+  }
+
+  const companyCtx = {
+    name: memoRow.privateCompanyName,
+    url: memoRow.privateCompanyUrl,
+    founders,
+    roundStage: memoRow.privateCompanyRoundStage,
+    sector: memoRow.privateCompanySector,
+    geo: memoRow.privateCompanyGeo,
+    checkSizeUsd: memoRow.privateCompanyCheckSizeUsd,
+    postMoneyUsd: memoRow.privateCompanyPostMoneyUsd,
+  };
+
+  const structuredMandate: StructuredMandate = {
+    checkSizeMinUsd: hvVersion?.privateCheckSizeMinUsd ?? null,
+    checkSizeMaxUsd: hvVersion?.privateCheckSizeMaxUsd ?? null,
+    stageAllowlist: parseJsonArray(hvVersion?.privateStageAllowlistJson),
+    sectorAllowlist: parseJsonArray(hvVersion?.privateSectorAllowlistJson),
+    sectorBlocklist: parseJsonArray(hvVersion?.privateSectorBlocklistJson),
+    geoAllowlist: parseJsonArray(hvVersion?.privateGeoAllowlistJson),
+  };
+
+  // Dossier is upstream of every agent — failure here stalls the run, so
+  // surface the error rather than silently producing low-signal output.
+  let research;
+  try {
+    research = await fetchPrivateCompanyResearch(companyCtx, accessToken);
+  } catch (err) {
+    yield* failRun(runId, err);
+    return;
+  }
+
+  let bullOut: PrivateCompanyBullAdvocateOutput;
+  let bearOut: PrivateCompanyBearAdvocateOutput;
+  let houseOut: PrivateCompanyHouseViewCheckerOutput;
+
+  try {
+    yield { type: "agent_started", agent: "bull_advocate" };
+    yield { type: "agent_started", agent: "bear_advocate" };
+    yield { type: "agent_started", agent: "house_view_checker" };
+
+    const [bullRes, bearRes, houseRes] = await Promise.all([
+      privateCompanyBullAdvocate({
+        company: companyCtx,
+        thesis: memoRow.thesis,
+        research,
+        accessToken,
+      }),
+      privateCompanyBearAdvocate({
+        company: companyCtx,
+        thesis: memoRow.thesis,
+        areasOfConcern: memoRow.areasOfConcern,
+        research,
+        accessToken,
+      }),
+      privateCompanyHouseViewChecker({
+        company: {
+          name: companyCtx.name,
+          roundStage: companyCtx.roundStage,
+          sector: companyCtx.sector,
+          geo: companyCtx.geo,
+          checkSizeUsd: companyCtx.checkSizeUsd,
+        },
+        thesis: memoRow.thesis,
+        houseViewMarkdown: hvContent,
+        structuredMandate,
+      }),
+    ]);
+
+    bullOut = bullRes.output;
+    bearOut = bearRes.output;
+    houseOut = houseRes.output;
+
+    await persistAudit(runId, bullRes.audit);
+    await persistAudit(runId, bearRes.audit);
+    await persistAudit(runId, houseRes.audit);
+
+    yield {
+      type: "agent_completed",
+      agent: "bull_advocate",
+      durationMs: bullRes.audit.durationMs,
+      output: bullOut,
+    };
+    yield {
+      type: "agent_completed",
+      agent: "bear_advocate",
+      durationMs: bearRes.audit.durationMs,
+      output: bearOut,
+    };
+    yield {
+      type: "agent_completed",
+      agent: "house_view_checker",
+      durationMs: houseRes.audit.durationMs,
+      output: houseOut,
+    };
+  } catch (err) {
+    yield* failRun(runId, err);
+    return;
+  }
+
+  try {
+    yield { type: "agent_started", agent: "synthesizer" };
+    const synthRes = await privateCompanySynthesizer({
+      company: companyCtx,
+      thesis: memoRow.thesis,
+      bull: bullOut,
+      bear: bearOut,
+      houseView: houseOut,
+    });
+    await persistAudit(runId, synthRes.audit);
+
+    await db
+      .update(memoRuns)
+      .set({
+        status: "completed",
+        synthesizedMemoJson: JSON.stringify(synthRes.output),
+        finishedAt: new Date(),
+      })
+      .where(eq(memoRuns.id, runId));
+
+    yield {
+      type: "agent_completed",
+      agent: "synthesizer",
+      durationMs: synthRes.audit.durationMs,
+      output: synthRes.output,
+    };
+    yield {
+      type: "synthesis_completed",
+      entityType: "private_company",
+      memo: synthRes.output,
+    };
+    yield { type: "run_completed", runId };
+  } catch (err) {
+    yield* failRun(runId, err);
+  }
+}
+
+function parseFoundersJson(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
+}
+
+function parseJsonArray(raw: string | null | undefined): string[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const cleaned = parsed
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return cleaned.length > 0 ? cleaned : null;
+  } catch {
+    return null;
   }
 }
 

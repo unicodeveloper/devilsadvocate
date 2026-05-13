@@ -9,6 +9,7 @@ import {
   funds,
 } from "./schema";
 import demoData from "./seed-data/demo-memos.json";
+import privateCoDemoData from "./seed-data/demo-private-company-memos.json";
 
 /**
  * Schema of one entry in demo-memos.json. Each entry contains a memo row
@@ -19,12 +20,21 @@ import demoData from "./seed-data/demo-memos.json";
 type Demo = {
   memo: {
     id: string;
-    entity_type: "stock" | "fund";
+    entity_type: "stock" | "fund" | "private_company";
     stock_ticker: string | null;
     stock_name: string | null;
     stock_exchange: string | null;
     stock_sector: string | null;
     fund_id: string | null;
+    // Private-company fields. Null for stock / fund memos.
+    private_company_name?: string | null;
+    private_company_url?: string | null;
+    private_company_founders_json?: string | null;
+    private_company_round_stage?: "seed" | "series_a" | "series_b" | null;
+    private_company_check_size_usd?: number | null;
+    private_company_post_money_usd?: number | null;
+    private_company_sector?: string | null;
+    private_company_geo?: string | null;
     thesis: string;
     areas_of_concern: string | null;
     private_peers: string | null;
@@ -96,13 +106,14 @@ type Demo = {
   }>;
 };
 
-const DEMOS = demoData as Demo[];
+const DEMOS = [...(demoData as Demo[]), ...(privateCoDemoData as Demo[])];
 
 /**
  * Inserts the demo memos + their stress-test runs, reviews, objections, and
- * threads. Idempotent — if any of the demo memo IDs already exist, the whole
- * thing is skipped. Fund-memo references are resolved by fund name; if the
- * referenced fund isn't seeded, that memo is skipped with a warning.
+ * threads. Idempotent per-entry — demos whose IDs already exist are skipped,
+ * so newly-added demos land on a fresh seed run even if some demos already
+ * exist. Fund-memo references are resolved by fund name; if the referenced
+ * fund isn't seeded, that memo is skipped with a warning.
  */
 export async function seedDemoMemosIfEmpty(
   seedUserId: string,
@@ -113,13 +124,16 @@ export async function seedDemoMemosIfEmpty(
     .from(memos)
     .where(inArray(memos.id, demoIds))
     .all();
-  if (existing.length > 0) return "skipped";
+  const existingIds = new Set(existing.map((r) => r.id));
+  if (existingIds.size === DEMOS.length) return "skipped";
 
   const fundRows = await db.select({ id: funds.id, name: funds.name }).from(funds);
   const fundIdByName = new Map(fundRows.map((f) => [f.name, f.id]));
 
+  let insertedCount = 0;
   for (const demo of DEMOS) {
     const m = demo.memo;
+    if (existingIds.has(m.id)) continue;
 
     let fundId: string | null = null;
     if (m.entity_type === "fund") {
@@ -144,6 +158,14 @@ export async function seedDemoMemosIfEmpty(
       stockExchange: m.stock_exchange,
       stockSector: m.stock_sector,
       fundId,
+      privateCompanyName: m.private_company_name ?? null,
+      privateCompanyUrl: m.private_company_url ?? null,
+      privateCompanyFoundersJson: m.private_company_founders_json ?? null,
+      privateCompanyRoundStage: m.private_company_round_stage ?? null,
+      privateCompanyCheckSizeUsd: m.private_company_check_size_usd ?? null,
+      privateCompanyPostMoneyUsd: m.private_company_post_money_usd ?? null,
+      privateCompanySector: m.private_company_sector ?? null,
+      privateCompanyGeo: m.private_company_geo ?? null,
       thesis: m.thesis,
       areasOfConcern: m.areas_of_concern,
       privatePeers: m.private_peers,
@@ -225,9 +247,11 @@ export async function seedDemoMemosIfEmpty(
         createdAt: new Date(t.created_at),
       });
     }
+
+    insertedCount++;
   }
 
-  return "seeded";
+  return insertedCount > 0 ? "seeded" : "skipped";
 }
 
 // Re-export so callers can introspect how many demos are bundled.

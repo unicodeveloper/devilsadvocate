@@ -22,7 +22,7 @@ export function DraftFields({
   initialThesis: string;
   initialAreasOfConcern: string | null;
   initialPrivatePeers: string | null;
-  entityType: "stock" | "fund";
+  entityType: "stock" | "fund" | "private_company";
   objections?: LoadedObjection[];
 }) {
   const [editing, setEditing] = useState(false);

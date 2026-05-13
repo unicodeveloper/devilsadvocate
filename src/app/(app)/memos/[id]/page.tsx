@@ -7,6 +7,7 @@ import {
   getLatestCompletedRun,
   listRunsForMemo,
   parseFundSynthesizedMemo,
+  parsePrivateCompanySynthesizedMemo,
   parseSynthesizedMemo,
 } from "@/lib/memos";
 import { getLatestReview, loadReviewWithObjections } from "@/lib/reviews";
@@ -14,6 +15,7 @@ import { getFundById } from "@/lib/funds";
 import { RunPanel } from "@/components/run-panel";
 import { MemoView } from "@/components/memo-view";
 import { FundMemoView } from "@/components/fund-memo-view";
+import { PrivateCompanyMemoView } from "@/components/private-company-memo-view";
 import { Badge, EmptyState } from "@/components/ui";
 import { DraftFields } from "./draft-fields";
 import { RunHistory } from "./run-history";
@@ -21,6 +23,7 @@ import { ReviewRail } from "./review-rail";
 import { SectionBadge } from "./section-badge";
 import type {
   FundSynthesizedMemo,
+  PrivateCompanySynthesizedMemo,
   SynthesizedMemo,
 } from "@/lib/agents/types";
 
@@ -68,10 +71,18 @@ export default async function MemoDetailPage({
     ? await loadReviewWithObjections(latestReviewRow.id)
     : null;
 
-  const synthesized: SynthesizedMemo | FundSynthesizedMemo | null =
+  const synthesized:
+    | SynthesizedMemo
+    | FundSynthesizedMemo
+    | PrivateCompanySynthesizedMemo
+    | null =
     memo.entityType === "fund"
       ? parseFundSynthesizedMemo(latestRun?.synthesizedMemoJson ?? null)
-      : parseSynthesizedMemo(latestRun?.synthesizedMemoJson ?? null);
+      : memo.entityType === "private_company"
+        ? parsePrivateCompanySynthesizedMemo(
+            latestRun?.synthesizedMemoJson ?? null,
+          )
+        : parseSynthesizedMemo(latestRun?.synthesizedMemoJson ?? null);
 
   const hasCompletedRun = Boolean(latestRun);
   const isEditable = isOwner && EDITABLE_STATUSES.has(memo.status as never);
@@ -109,6 +120,22 @@ export default async function MemoDetailPage({
               <h1 className="text-2xl font-semibold tracking-tight text-text">
                 {fund?.name ?? "(fund deleted)"}
               </h1>
+            </>
+          ) : memo.entityType === "private_company" ? (
+            <>
+              <Badge tone="neutral">
+                {memo.privateCompanyRoundStage === "series_b"
+                  ? "SERIES B"
+                  : memo.privateCompanyRoundStage === "series_a"
+                    ? "SERIES A"
+                    : "SEED"}
+              </Badge>
+              <h1 className="text-2xl font-semibold tracking-tight text-text">
+                {memo.privateCompanyName ?? "(private company)"}
+              </h1>
+              {memo.privateCompanySector ? (
+                <Badge tone="neutral">{memo.privateCompanySector}</Badge>
+              ) : null}
             </>
           ) : (
             <>
@@ -258,6 +285,10 @@ export default async function MemoDetailPage({
             ) : synthesized ? (
               memo.entityType === "fund" ? (
                 <FundMemoView memo={synthesized as FundSynthesizedMemo} />
+              ) : memo.entityType === "private_company" ? (
+                <PrivateCompanyMemoView
+                  memo={synthesized as PrivateCompanySynthesizedMemo}
+                />
               ) : (
                 <MemoView memo={synthesized as SynthesizedMemo} />
               )

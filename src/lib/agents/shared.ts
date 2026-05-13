@@ -61,3 +61,10 @@ export function citationsAsBullets(citations: Citation[]): string {
     .map((c) => `- ${c.title ? `${c.title} — ` : ""}${c.url}${c.quote ? `\n    > "${c.quote}"` : ""}`)
     .join("\n");
 }
+
+/** Human label for a private-company round stage — used in agent prompts. */
+export function stageLabel(stage: "seed" | "series_a" | "series_b"): string {
+  if (stage === "series_b") return "Series B";
+  if (stage === "series_a") return "Series A";
+  return "Seed";
+}

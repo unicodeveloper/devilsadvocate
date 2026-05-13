@@ -61,17 +61,109 @@ export async function readHouseView(
  * Persists a new version of `ownerUserId`'s House View. The DB is
  * append-only — every save creates an immutable snapshot row, and the most
  * recent row per owner is that owner's effective "current" version.
+ *
+ * Carries forward the structured private-co mandate fields from the
+ * previous version when the caller doesn't provide them — so editing the
+ * markdown doesn't blow away the structured mandate, and vice versa.
  */
 export async function writeHouseView(
   content: string,
   ownerUserId: string,
   updatedByUserId: string = ownerUserId,
+  structuredMandate?: PrivateMandateFields,
 ): Promise<void> {
+  const previous = await getLatestHouseViewVersion(ownerUserId);
+  const mandate = structuredMandate ?? extractMandateFromVersion(previous);
   await db.insert(houseViewVersions).values({
     content,
     ownerUserId,
     updatedByUserId,
+    privateCheckSizeMinUsd: mandate.checkSizeMinUsd,
+    privateCheckSizeMaxUsd: mandate.checkSizeMaxUsd,
+    privateStageAllowlistJson: serializeArray(mandate.stageAllowlist),
+    privateSectorAllowlistJson: serializeArray(mandate.sectorAllowlist),
+    privateSectorBlocklistJson: serializeArray(mandate.sectorBlocklist),
+    privateGeoAllowlistJson: serializeArray(mandate.geoAllowlist),
   });
+}
+
+/**
+ * Save just the structured private-company mandate fields. Creates a new
+ * version row that carries the current markdown forward — keeps the
+ * version log honest (one row per change, regardless of which slice the
+ * user touched).
+ */
+export async function writePrivateMandate(
+  fields: PrivateMandateFields,
+  ownerUserId: string,
+  updatedByUserId: string = ownerUserId,
+): Promise<void> {
+  const previous = await getLatestHouseViewVersion(ownerUserId);
+  const content = previous?.content ?? PLACEHOLDER;
+  await writeHouseView(content, ownerUserId, updatedByUserId, fields);
+}
+
+export type PrivateMandateFields = {
+  checkSizeMinUsd: number | null;
+  checkSizeMaxUsd: number | null;
+  stageAllowlist: string[] | null;
+  sectorAllowlist: string[] | null;
+  sectorBlocklist: string[] | null;
+  geoAllowlist: string[] | null;
+};
+
+const EMPTY_MANDATE: PrivateMandateFields = {
+  checkSizeMinUsd: null,
+  checkSizeMaxUsd: null,
+  stageAllowlist: null,
+  sectorAllowlist: null,
+  sectorBlocklist: null,
+  geoAllowlist: null,
+};
+
+/**
+ * Read the most recent structured private-co mandate for a user. Falls
+ * back to `EMPTY_MANDATE` if the user has no House View row yet.
+ */
+export async function readPrivateMandate(
+  ownerUserId: string,
+): Promise<PrivateMandateFields> {
+  const row = await getLatestHouseViewVersion(ownerUserId);
+  return extractMandateFromVersion(row);
+}
+
+function extractMandateFromVersion(
+  row: Awaited<ReturnType<typeof getLatestHouseViewVersion>>,
+): PrivateMandateFields {
+  if (!row) return EMPTY_MANDATE;
+  return {
+    checkSizeMinUsd: row.privateCheckSizeMinUsd ?? null,
+    checkSizeMaxUsd: row.privateCheckSizeMaxUsd ?? null,
+    stageAllowlist: parseArray(row.privateStageAllowlistJson),
+    sectorAllowlist: parseArray(row.privateSectorAllowlistJson),
+    sectorBlocklist: parseArray(row.privateSectorBlocklistJson),
+    geoAllowlist: parseArray(row.privateGeoAllowlistJson),
+  };
+}
+
+function parseArray(raw: string | null): string[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const cleaned = parsed
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return cleaned.length > 0 ? cleaned : null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeArray(arr: string[] | null): string | null {
+  if (!arr || arr.length === 0) return null;
+  return JSON.stringify(arr);
 }
 
 /**

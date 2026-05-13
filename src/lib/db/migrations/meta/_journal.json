@@ -78,6 +78,13 @@
       "when": 1778835000000,
       "tag": "0010_critic_rules_per_user",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1778935000000,
+      "tag": "0011_private_company_memos",
+      "breakpoints": true
     }
   ]
 }

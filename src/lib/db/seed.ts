@@ -1,9 +1,39 @@
+import { existsSync, readFileSync } from "node:fs";
+
+// Load .env.local before importing anything that reads env vars at module
+// init (db/index.ts, valyu.ts). Next.js loads it automatically, but
+// standalone `tsx` runs of this script do not — and the seed user picked
+// here must match what the running app picks, or seeded demos end up
+// owned by a different user than `listExampleMemos()` queries for.
+loadEnvFile(".env.local");
+
 import { db } from "./index";
 import { criticRules, fundHoldings, funds, users } from "./schema";
 import { and, eq } from "drizzle-orm";
 import { seedDemoHouseViewIfEmpty } from "../house-view";
 import { seedDemoMemosIfEmpty, DEMO_MEMO_COUNT } from "./seed-demo-memos";
 import { BUILTIN_RULES } from "../critic/rules/builtin";
+
+function loadEnvFile(path: string): void {
+  if (!existsSync(path)) return;
+  const content = readFileSync(path, "utf8");
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    if (process.env[key] !== undefined) continue;
+    let value = line.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
 
 type SeedHolding = {
   ticker: string;

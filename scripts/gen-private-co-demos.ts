@@ -1,0 +1,759 @@
+/**
+ * One-off: hand-author the 3 private-company demo memos (Seed / Series A /
+ * Series B) and write them to
+ * `src/lib/db/seed-data/demo-private-company-memos.json`.
+ *
+ * Run once after editing:
+ *   npx tsx scripts/gen-private-co-demos.ts
+ *
+ * The output JSON file is loaded by `seedDemoMemosIfEmpty` alongside the
+ * existing stock/fund demos. Synthesized memos are constructed here as JS
+ * objects so we get type-checking against `PrivateCompanySynthesizedMemo`
+ * before stringifying for the DB column.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import type { PrivateCompanySynthesizedMemo } from "../src/lib/agents/types";
+
+// Stable UUIDs so re-runs produce the same seed; the loader's existence
+// check skips re-insertion on a fresh deploy if these are already present.
+const MEMO_IDS = {
+  seed: "d1a91e2c-7f4b-4c5e-9d3a-1a2b3c4d5e6f",
+  seriesA: "d2a91e2c-7f4b-4c5e-9d3a-2a2b3c4d5e6f",
+  seriesB: "d3a91e2c-7f4b-4c5e-9d3a-3a2b3c4d5e6f",
+} as const;
+
+const RUN_IDS = {
+  seed: "e1b91e2c-7f4b-4c5e-9d3a-1a2b3c4d5e6f",
+  seriesA: "e2b91e2c-7f4b-4c5e-9d3a-2a2b3c4d5e6f",
+  seriesB: "e3b91e2c-7f4b-4c5e-9d3a-3a2b3c4d5e6f",
+} as const;
+
+// Time anchors — placed after the existing demos so they sort to the top
+// of /memos (which orders by updatedAt desc).
+const T_SEED = 1779000000000; // ~mid-May 2026
+const T_SERIES_A = 1779100000000;
+const T_SERIES_B = 1779200000000;
+
+// ---------------------------------------------------------------------------
+// SEED — Modular Care · HealthTech · size_down (data-gaps emphasis)
+// ---------------------------------------------------------------------------
+const seedThesis = `Modular Care is an API-first platform connecting independent primary-care clinics with specialist networks. The wedge is utilization analytics for Medicaid managed-care contracts — a segment where incumbents struggle with low-margin operational reporting. ARR is ~$180K with three regional MCO contracts and 12 clinic-network LOIs. Stage-appropriate team (ex-Oscar, ex-Aledade) with deep domain. $50K check at $8M post-money.`;
+
+const seedAreasOfConcern = `Medicaid MCO sales cycles are 12–18 months — bridging from LOI to contract revenue may require more runway than the round provides. Switching cost is real but distribution risk is high: an incumbent EHR or Particle/Component-style player could replicate the analytics layer if Modular signals it's working. Founder-market fit is strong on the operating side but neither founder has carried a P&L through a payer renegotiation cycle.`;
+
+const seedSynth: PrivateCompanySynthesizedMemo = {
+  setup: {
+    summary:
+      "Modular Care is a seed-stage B2B health-tech building utilization analytics for Medicaid managed-care contracts via an API-first platform. The thesis hinges on a real distribution wedge (LOI-to-revenue conversion in MCO sales cycles) and a domain-experienced founding team. Stage-appropriate ARR sits below the implicit floor for an $8M post-money, and several load-bearing data points live in the data room.",
+    keyFacts: [
+      { label: "Stage", value: "Seed", source: null },
+      { label: "Sector", value: "HealthTech", source: null },
+      { label: "Geography", value: "US", source: null },
+      { label: "Check", value: "$50,000", source: null },
+      { label: "Post-money", value: "$8,000,000", source: null },
+      { label: "Founders", value: "Anya Patel, David Chen", source: null },
+      { label: "Claimed ARR", value: "~$180K", source: null },
+      { label: "Contracts", value: "3 MCO + 12 LOIs", source: null },
+    ],
+  },
+  houseViewOverlay: {
+    headline:
+      "Aligned with the mandate — no mechanical violations against the structured rules.",
+    body: "Mandate allows US-based HealthTech seed checks in the $25K–$100K band; this deal sits cleanly inside. Qualitative rules around founder-market fit and B2B SaaS preference are also met.",
+    ruleVerdicts: [
+      {
+        rule: "Check size between $25K and $100K at Seed.",
+        verdict: "pass",
+        reasoning:
+          "Proposed $50,000 check is inside the structured mandate band.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — structured mandate",
+            quote: "Check size: $25,000 – $100,000",
+          },
+        ],
+      },
+      {
+        rule: "Founders should have domain operating experience.",
+        verdict: "pass",
+        reasoning:
+          "Both founders are ex-Oscar Health and ex-Aledade — the two most relevant operating analogues for a Medicaid-MCO B2B health-tech company.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — qualitative",
+            quote: "Founders should have domain operating experience.",
+          },
+        ],
+      },
+    ],
+    mechanicalViolations: [],
+  },
+  stressTest: {
+    summary:
+      "Founder credentials and the analytics wedge are real, but the path from $180K ARR to a $20M+ next round implied by an $8M post-money will require pricing power Modular hasn't yet demonstrated, in a sales cycle longer than the round's runway.",
+    findings: [
+      {
+        title: "MCO sales cycle is longer than the round's implied runway",
+        body: "Medicaid managed-care contracting commonly runs 12–18 months from first conversation to revenue. Twelve clinic-network LOIs is encouraging but LOIs are not contracts, and converting them on the standard cycle would require ~$1.5M of runway at current burn — tight for a $50K-check round that likely tops out at ~$2M total raise.",
+        citations: [
+          {
+            url: "https://www.healthaffairs.org/do/10.1377/forefront.20231016.342108/full/",
+            title: "Health Affairs — Medicaid MCO contracting cycles",
+            quote:
+              "MCO procurement and integration commonly takes 12–18 months from selection to revenue realization.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "Sales-cycle data is from public payer-procurement research; the runway-bridge inference is the analyst's.",
+      },
+      {
+        title: "Adjacent infrastructure players could replicate the wedge",
+        body: "Particle Health and Component (Health Gorilla) operate adjacent health-data infrastructure with their own MCO relationships. A modest fine-tuning effort plus their existing data pipes could replicate Modular's analytics layer in 9–12 months if the deal signals it's working at scale.",
+        citations: [
+          {
+            url: "https://www.particlehealth.com/",
+            title: "Particle Health",
+            quote:
+              "Particle Health is the API for healthcare data interoperability.",
+          },
+          {
+            url: "https://www.healthgorilla.com/",
+            title: "Health Gorilla (Component) — health-data infrastructure",
+            quote:
+              "Health Gorilla provides a clinical data network for healthcare interoperability.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "Competitor positioning is sourced from each company's website; the replication-effort estimate is inferential.",
+      },
+      {
+        title: "$8M post on $180K ARR implies ~44x revenue at Seed",
+        body: "Even by 2024–2026 Seed-stage health-tech standards, a $8M post-money on $180K ARR is at the top of the venture-funded distribution. The implied next-round target ($25M+ Series A at typical 12–18 month gap) requires roughly $1.5–$2M ARR — an ~8–10x ARR step in a 12-month window, contingent on LOIs converting to revenue inside the round's runway.",
+        citations: [
+          {
+            url: "https://carta.com/blog/state-of-private-markets-2025/",
+            title: "Carta — State of Private Markets",
+            quote:
+              "Median Seed-to-Series-A graduation requires ~8–10x ARR growth over 12–18 months.",
+          },
+        ],
+        confidence: "high",
+        evidenceBasis:
+          "The 44x multiple is arithmetic from the disclosed terms; the next-round implication is corroborated by public Seed-to-A graduation data.",
+      },
+      {
+        title:
+          "Neither founder has carried a P&L through a payer renegotiation cycle",
+        body: "Both founders held strong operating roles, but Anya Patel was an Oscar Health product lead (not P&L owner) and David Chen ran provider operations at Aledade (not contract negotiation). The payer-renegotiation muscle that's load-bearing for an MCO-pricing-power thesis remains untested for this team.",
+        citations: [
+          {
+            url: "https://www.linkedin.com/in/example-anya-patel/",
+            title: "Anya Patel — public profile",
+            quote:
+              "Product lead for member analytics at Oscar Health (2019–2022).",
+          },
+        ],
+        confidence: "low",
+        evidenceBasis:
+          "Public-footprint signal only; the absence of a renegotiation role is inferred from the listed responsibilities.",
+      },
+    ],
+    blindSpots: [
+      "How many of the 12 LOIs have a named contract owner on the customer side, and what is the median time from LOI to signed MSA?",
+      "What is the current gross margin per MCO contract, and is there evidence of pricing power in the third (most recent) contract vs. the first?",
+      "If a major EHR (Epic, Athena) added comparable analytics tomorrow, what is Modular's switching-cost story for the existing three MCOs?",
+      "What is the founders' personal capital position, and is the cap table structured to survive an extended seed-to-A gap if MCO sales slip?",
+    ],
+  },
+  dataGaps: [
+    {
+      category: "financials",
+      request: "Monthly MRR by clinic + by MCO contract for the last 12 months",
+      reason:
+        "The ARR claim is the load-bearing input for the round multiple; per-contract trend reveals whether growth is broad-based or concentrated.",
+    },
+    {
+      category: "retention",
+      request:
+        "Cohort retention from the three MCO contracts since contract inception",
+      reason:
+        "Retention at the contract level is the real moat signal for a Medicaid-MCO B2B SaaS at this stage.",
+    },
+    {
+      category: "cap_table",
+      request: "Current cap table including ESOP pool and any outstanding SAFEs",
+      reason:
+        "Establishes the founders' equity dilution path and reveals signaling risk from prior SAFEs at higher caps.",
+    },
+    {
+      category: "customer_concentration",
+      request:
+        "% of ARR from largest contract and largest two contracts; named lighthouse customer status",
+      reason:
+        "Three MCO contracts on $180K ARR means concentration is mathematically high; the exact distribution affects how much of the ARR is at single-renewal risk.",
+    },
+    {
+      category: "unit_economics",
+      request:
+        "CAC by acquisition channel and gross margin per MCO contract; payback period on contract LOI-to-revenue conversion",
+      reason:
+        "Determines whether the round's runway is realistically sufficient to bridge MCO sales cycles to next-round metrics.",
+    },
+  ],
+  finalVerdict: {
+    label: "size_down",
+    reasoning:
+      "Strong founder/market signals and a real wedge, but the $8M post-money is ambitious for $180K ARR and the round size doesn't obviously cover the MCO sales cycle. Recommend sizing down to $25K and revisiting after seeing the data-room items below — particularly per-contract retention, ARR cohort trend, and the cap table.",
+    confidence: "medium",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// SERIES A — Lattice Forge · DevTools · proceed
+// ---------------------------------------------------------------------------
+const seriesAThesis = `Lattice Forge is an AI-native CI/CD platform for engineering teams of 50–500 engineers. The wedge: failed builds and flaky tests are routed to a specialized fine-tuned model that proposes root-cause patches in <60 seconds. Currently $3.2M ARR up from $400K twelve months ago (~8x YoY), 92% gross retention, 138% net retention. Founders ex-CircleCI and ex-GitHub Actions. Series A led by a tier-1 infra fund at $40M post.`;
+
+const seriesAAreasOfConcern = `Defensibility against incumbents (CircleCI, GitHub Actions, Buildkite) is the central question — the AI wedge could be replicated by anyone with a model and an API. Concentration risk: top-5 customers reportedly ~60% of ARR. Burn rate to sustain the headcount growth implied by the round needs verification against public hiring footprint.`;
+
+const seriesASynth: PrivateCompanySynthesizedMemo = {
+  setup: {
+    summary:
+      "Lattice Forge is a Series A DevTools company with credible founders (ex-CircleCI, ex-GitHub Actions) shipping an AI-native CI/CD layer. Public traction signals support the $3.2M ARR claim, retention metrics are strong, and the proposed terms sit cleanly inside the mandate. The defensibility question is real but the team and trajectory carry the deal at this stage.",
+    keyFacts: [
+      { label: "Stage", value: "Series A", source: null },
+      { label: "Sector", value: "DevTools", source: null },
+      { label: "Geography", value: "US", source: null },
+      { label: "Check", value: "$500,000", source: null },
+      { label: "Post-money", value: "$40,000,000", source: null },
+      { label: "Founders", value: "Marisa Chen, Ravi Kapoor", source: null },
+      { label: "ARR", value: "$3.2M (8x YoY)", source: null },
+      { label: "Net retention", value: "138%", source: null },
+    ],
+  },
+  houseViewOverlay: {
+    headline:
+      "Aligned — no mechanical violations, qualitative rules met.",
+    body: "DevTools is on the mandate sector allowlist; US geography is allowed; check size sits inside the configured band; Series A is on the stage allowlist. Founder pedigree and capital efficiency benchmarks align with the qualitative mandate language.",
+    ruleVerdicts: [
+      {
+        rule: "DevTools is on the sector allowlist.",
+        verdict: "pass",
+        reasoning:
+          "Mandate explicitly lists DevTools / Infrastructure / Developer-platform as allowed sectors.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — sector allowlist",
+            quote: "Allowed sectors: DevTools, AI Infrastructure, B2B SaaS.",
+          },
+        ],
+      },
+      {
+        rule: "Founders should have prior operator role at category leader.",
+        verdict: "pass",
+        reasoning:
+          "Marisa Chen (ex-CircleCI senior engineering) and Ravi Kapoor (ex-GitHub Actions PM) both held meaningful operating roles at category-defining CI/CD companies.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — qualitative",
+            quote:
+              "Founders should have prior operator role at category leader.",
+          },
+        ],
+      },
+      {
+        rule: "Net retention >= 120% at Series A.",
+        verdict: "pass",
+        reasoning:
+          "Public investor-update language pegs NRR at 138%, above the mandate's 120% bar.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — qualitative",
+            quote: "Net retention >= 120% at Series A.",
+          },
+        ],
+      },
+    ],
+    mechanicalViolations: [],
+  },
+  stressTest: {
+    summary:
+      "The bear case is real but stage-appropriate: defensibility against incumbents, customer concentration, and a gap between claimed ARR growth and public hiring signals. None of these is disqualifying at Series A given the team and trajectory, but each materially affects how aggressively to size.",
+    findings: [
+      {
+        title: "CircleCI and GitHub Actions are both shipping comparable AI features",
+        body: "Both incumbents announced AI-routed build-failure diagnosis in their 2025 roadmaps and have public GA dates for late 2026. Their distribution advantage — being inside the build pipeline by default — means Lattice's window to convert lighthouse customers into a defensible base is roughly four quarters.",
+        citations: [
+          {
+            url: "https://circleci.com/changelog/",
+            title: "CircleCI changelog — AI build diagnostics",
+            quote:
+              "AI-routed build failure analysis is now available in private beta.",
+          },
+          {
+            url: "https://github.blog/changelog/",
+            title: "GitHub Actions — Copilot integration",
+            quote:
+              "Copilot for Actions can now suggest fixes for failed workflows.",
+          },
+        ],
+        confidence: "high",
+        evidenceBasis:
+          "Both incumbents have published official changelog entries; the four-quarter window is the analyst's inference from announced GA dates.",
+      },
+      {
+        title: "Customer concentration is meaningful at this stage",
+        body: "Founder remarks in a recent industry podcast suggested the top-5 customers account for ~60% of ARR. A single mid-market churn event below the Series A threshold would compress ARR materially and complicate the Series B story 12–18 months out.",
+        citations: [
+          {
+            url: "https://www.devtoolsdigest.example/podcast/lattice-forge-2026",
+            title: "DevTools Digest — Marisa Chen interview, March 2026",
+            quote:
+              "We're still seeing top-five customers be a meaningful slice of the revenue.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "Founder podcast quote is a credible single source; concentration percentage not independently verified.",
+      },
+      {
+        title: "Hiring velocity is slower than the implied burn-supporting headcount growth",
+        body: "Public LinkedIn data via Valyu shows ~14 engineering hires over the last 12 months; for $3.2M ARR with a typical Series A burn multiple of 1.5–2.0x, the headcount-supporting burn implies closer to ~25 hires/year. Possible explanations: a higher-leverage AI engineering team, or the round is intended to fund a step-change in hiring velocity.",
+        citations: [
+          {
+            url: "https://platform.valyu.ai/data-sources/valyu/linkedin/hiring",
+            title: "Valyu — Lattice Forge public hiring footprint",
+            quote: "Engineering hires (Jan 2025 – Mar 2026): 14 new joiners.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "LinkedIn signal is reliable; the burn-multiple implication is a directional inference.",
+      },
+      {
+        title: "NRR of 138% is the strongest single signal in the deal",
+        body: "Sustained NRR above 130% in a DevTools SaaS at Series A is rare and load-bearing — it means existing customers are voluntarily expanding usage at a rate that more than compensates for any churn. This is the metric that most clearly distinguishes Lattice from the incumbent-AI-feature replication risk.",
+        citations: [
+          {
+            url: "https://openviewpartners.com/blog/saas-benchmarks-2026/",
+            title: "OpenView — SaaS NRR benchmarks 2026",
+            quote:
+              "Top-quartile DevTools NRR at Series A: 125–145%; median: 108%.",
+          },
+        ],
+        confidence: "high",
+        evidenceBasis:
+          "OpenView publishes the benchmark; Lattice's claimed NRR is from the public Series A announcement.",
+      },
+    ],
+    blindSpots: [
+      "What is the named-customer list for the top-5 ARR accounts, and what is the renewal cadence on each?",
+      "How does the AI-routing model's accuracy compare to CircleCI's beta on a shared benchmark — and does Lattice have a moat in training data?",
+      "What is the gross margin on the AI-routing feature net of inference cost, and how does that scale at 10x usage?",
+      "What is the Series B lead's expected metric — typically $10M ARR at NRR>130% — and is the round size + hiring plan sized to hit it?",
+    ],
+  },
+  dataGaps: [
+    {
+      category: "financials",
+      request: "Monthly revenue + gross margin trend, last 12 months",
+      reason:
+        "Validates the $3.2M ARR figure with month-over-month context and reveals seasonality / discount activity.",
+    },
+    {
+      category: "customer_concentration",
+      request:
+        "Top-10 customer ARR with contract terms, renewal dates, and discount levels",
+      reason:
+        "Quantifies the concentration risk the podcast comment alluded to; renewal dates determine ARR-at-risk over the round's runway.",
+    },
+    {
+      category: "retention",
+      request: "Cohort retention table (NRR + GRR) by customer cohort quarter",
+      reason:
+        "Confirms whether the 138% NRR is broad-based or driven by a small expanding cohort.",
+    },
+    {
+      category: "unit_economics",
+      request: "Net new ARR per dollar of S&M spend, last 4 quarters",
+      reason:
+        "Establishes whether the growth is durable or sales-spend-driven; informs the realistic burn plan.",
+    },
+  ],
+  finalVerdict: {
+    label: "proceed",
+    reasoning:
+      "Strong stage-appropriate metrics, credible team, mandate-compliant terms. The defensibility risk warrants close monitoring (and a participation right on the next round) but doesn't disqualify the deal at Series A given the NRR and team. Proceed at the proposed $500K check.",
+    confidence: "medium",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// SERIES B — Helix Compute · AI Infrastructure · size_down + mandate violation
+// ---------------------------------------------------------------------------
+const seriesBThesis = `Helix Compute is GPU virtualization and inference orchestration for mid-market enterprises ($50M–$500M revenue) deploying internal AI workloads. The wedge: fractional GPU allocation across a customer's existing capacity, reducing inference cost 40–60% vs. dedicated tier. Currently $18M ARR up from $5M ($3.6x YoY), 145% NRR, three Fortune-1000 lighthouse customers. Founders ex-NVIDIA (Diana Foster, ex-DGX product) and ex-Run:AI (Krish Iyer, ex-engineering). Series B led by tier-1 infra fund at $200M post.`;
+
+const seriesBAreasOfConcern = `Cloud-provider squeeze — AWS, Azure, GCP are all rolling out competing fractional-GPU services and could undercut on price. Defensibility is "good enough today" but moat depth at scale is the central long-term question. Cap-table dynamics at $200M post need scrutiny: prior round multiple, founder equity remaining, ESOP refresh, secondary activity.`;
+
+const seriesBSynth: PrivateCompanySynthesizedMemo = {
+  setup: {
+    summary:
+      "Helix Compute is a Series B AI-infrastructure company with strong founder credentials (ex-NVIDIA, ex-Run:AI) and credible traction ($18M ARR, 145% NRR). The thesis maps cleanly to the AI-capex tailwind. Mandate enforcement caught one mechanical violation: the proposed check exceeds the recorded $500K maximum band. Structural risks — hyperscaler competition and cap-table dynamics at $200M post — are stage-appropriate but reinforce the size-down recommendation.",
+    keyFacts: [
+      { label: "Stage", value: "Series B", source: null },
+      { label: "Sector", value: "AI Infrastructure", source: null },
+      { label: "Geography", value: "US", source: null },
+      { label: "Check (proposed)", value: "$2,000,000", source: null },
+      { label: "Post-money", value: "$200,000,000", source: null },
+      { label: "Founders", value: "Diana Foster, Krish Iyer", source: null },
+      { label: "ARR", value: "$18M (3.6x YoY)", source: null },
+      { label: "Net retention", value: "145%", source: null },
+    ],
+  },
+  houseViewOverlay: {
+    headline:
+      "Partially aligned — one mechanical violation (check size); qualitative rules met.",
+    body: "Sector, geography, and stage all sit inside the mandate. AI Infrastructure is on the sector allowlist; US is on the geo allowlist; Series B is on the stage allowlist. However, the proposed $2,000,000 check exceeds the recorded $500,000 maximum band — a hard violation that the Synthesizer treats as decision-relevant.",
+    ruleVerdicts: [
+      {
+        rule: "AI Infrastructure is on the sector allowlist.",
+        verdict: "pass",
+        reasoning:
+          "Mandate explicitly lists AI Infrastructure as an allowed sector.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — sector allowlist",
+            quote: "Allowed sectors: DevTools, AI Infrastructure, B2B SaaS.",
+          },
+        ],
+      },
+      {
+        rule: "Series B is on the stage allowlist.",
+        verdict: "pass",
+        reasoning:
+          "The mandate's structured stage allowlist includes Series B.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — structured mandate",
+            quote: "Allowed stages: Seed, Series A, Series B.",
+          },
+        ],
+      },
+      {
+        rule: "Founders should have category-leader operator pedigree.",
+        verdict: "pass",
+        reasoning:
+          "Diana Foster (ex-NVIDIA DGX product) and Krish Iyer (ex-Run:AI engineering) represent two of the highest-signal operating analogues in AI infrastructure.",
+        evidence: [
+          {
+            url: "house-view.md",
+            title: "House View — qualitative",
+            quote:
+              "Founders should have category-leader operator pedigree.",
+          },
+        ],
+      },
+    ],
+    mechanicalViolations: [
+      {
+        field: "check_size",
+        message:
+          "Check $2,000,000 exceeds mandate maximum $500,000",
+      },
+    ],
+  },
+  stressTest: {
+    summary:
+      "Strong stage-appropriate metrics and a credible team, but the moat against hyperscaler competition is the central long-term question, and the $200M post implies an aggressive next-round expectation. The deal is defensible, but not at the proposed check size given the recorded mandate.",
+    findings: [
+      {
+        title:
+          "Hyperscalers are converging on fractional-GPU offerings",
+        body: "AWS announced its Capacity Blocks for ML fractional-GPU offering at re:Invent 2025; Azure shipped GPU-partitioned VM SKUs in early 2026; GCP's TPU virtualization is being repositioned as a fractional-GPU alternative. All three have distribution Helix can't match, and all three can price below cost long enough to matter.",
+        citations: [
+          {
+            url: "https://aws.amazon.com/about-aws/whats-new/2025/12/amazon-ec2-capacity-blocks-ml/",
+            title: "AWS Capacity Blocks for ML — fractional GPU pricing",
+            quote:
+              "Amazon EC2 Capacity Blocks for ML now supports fractional GPU reservations across the P5 family.",
+          },
+          {
+            url: "https://azure.microsoft.com/en-us/blog/gpu-partitioning-ga-2026/",
+            title: "Azure GPU partitioning — GA announcement",
+            quote:
+              "GPU-partitioned VM SKUs are now generally available across NDv5 instances.",
+          },
+        ],
+        confidence: "high",
+        evidenceBasis:
+          "Both AWS and Azure announcements are official; the GCP positioning shift is inferred from public roadmap commentary.",
+      },
+      {
+        title: "145% NRR is the load-bearing positive signal",
+        body: "Sustained NRR above 140% in an AI-infrastructure SaaS at Series B is a top-quartile signal — it means existing customers are voluntarily expanding spend faster than market growth alone would imply. This is the metric that most clearly distinguishes Helix from the hyperscaler-replication risk.",
+        citations: [
+          {
+            url: "https://openviewpartners.com/blog/saas-benchmarks-2026/",
+            title: "OpenView — SaaS NRR benchmarks 2026",
+            quote:
+              "Top-decile infrastructure SaaS NRR at Series B: 140–160%; median: 118%.",
+          },
+        ],
+        confidence: "high",
+        evidenceBasis:
+          "OpenView benchmark; Helix's claimed NRR is from the Series B public announcement.",
+      },
+      {
+        title:
+          "Founder ex-Run:AI provides specific moat insight",
+        body: "Krish Iyer's prior role at Run:AI (acquired by NVIDIA in 2024) gives the team a clear view of which technical bets become durable and which get commoditized. The product roadmap reportedly skews toward orchestration-layer features that benefit from NVIDIA's APIs without depending on a single provider — a strategy that's plausibly defensible if executed.",
+        citations: [
+          {
+            url: "https://blogs.nvidia.com/blog/run-ai-acquisition/",
+            title: "NVIDIA acquires Run:AI",
+            quote:
+              "NVIDIA has completed its acquisition of Run:AI, a leader in compute orchestration for AI.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "Acquisition is publicly confirmed; the roadmap insight is inferred from public product positioning.",
+      },
+      {
+        title: "$200M post implies $50M+ ARR at next round",
+        body: "Series B at $200M post-money typically requires a $50M+ ARR Series C inside 18–24 months to support a clean step-up. Helix's $18M ARR with $50M run-rate target means net new ARR of ~$32M in the window, against hyperscaler price pressure — achievable but not without execution risk on the GTM build-out.",
+        citations: [
+          {
+            url: "https://carta.com/blog/state-of-private-markets-2025/",
+            title: "Carta — State of Private Markets",
+            quote:
+              "Series B to Series C graduation typically requires 2.5–3.5x ARR growth over 18–24 months.",
+          },
+        ],
+        confidence: "medium",
+        evidenceBasis:
+          "Carta provides graduation data; the $50M-ARR target is inferred from the round multiple.",
+      },
+    ],
+    blindSpots: [
+      "What's the gross margin trajectory net of GPU acquisition / lease cost, and how does it scale as a fraction of customer-paid utilization?",
+      "How much of the $18M ARR is dependent on the three Fortune-1000 lighthouse customers — and what's the renewal-risk profile on those contracts?",
+      "What's the founders' equity remaining post-Series-B, and is there meaningful secondary activity in the round?",
+      "Is there a tier-2 or tier-3 hyperscaler partnership Helix could lock in as a defensive moat — and what's the partnership-pipeline status?",
+    ],
+  },
+  dataGaps: [
+    {
+      category: "cap_table",
+      request:
+        "Cap table with founder equity %, ESOP pool, and any secondary activity at this round",
+      reason:
+        "Series B at $200M post often comes with founder secondary; the cap table reveals whether founder alignment for the long path to Series C is intact.",
+    },
+    {
+      category: "financials",
+      request:
+        "Monthly revenue + gross margin trend, last 12 months; CapEx vs OpEx breakdown for GPU infrastructure",
+      reason:
+        "Gross margin trajectory net of GPU cost is the load-bearing input for the durability of the unit economics.",
+    },
+    {
+      category: "customer_concentration",
+      request:
+        "Top-3 lighthouse customer ARR contribution, contract terms, and renewal dates",
+      reason:
+        "$18M ARR with three F1000 lighthouses means concentration is mathematically high; renewal timing determines ARR-at-risk over the round runway.",
+    },
+    {
+      category: "unit_economics",
+      request:
+        "Gross margin trajectory by quarter and bridge to target margin at scale; inference-cost-per-GPU-hour trend",
+      reason:
+        "AI-infrastructure GM is non-trivial at this stage; the bridge story has to hold up against hyperscaler price compression.",
+    },
+    {
+      category: "team",
+      request:
+        "Reference notes from two LPs of the prior round's lead investor + two named customer CTOs",
+      reason:
+        "At Series B the team is no longer the founders alone — the depth-of-bench and named-customer love-or-leave signal matter more than founder credentials.",
+    },
+  ],
+  finalVerdict: {
+    label: "size_down",
+    reasoning:
+      "Strong company, mandate-compliant sector / stage / geo, with credible founder pedigree and load-bearing positive signals (145% NRR, $18M ARR, ex-Run:AI insight). However, the proposed $2,000,000 check exceeds the recorded $500,000 mandate maximum — a mechanical violation that drives the size-down recommendation. Suggest writing the largest allowed check ($500K) and explicitly revisiting the mandate band if the family office wants to size up specifically for Series B AI-infrastructure deals.",
+    confidence: "high",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Assemble the demo entries in the seed-loader's expected shape
+// ---------------------------------------------------------------------------
+type DemoEntry = {
+  memo: Record<string, unknown>;
+  fundName: null;
+  latestRun: {
+    id: string;
+    memo_id: string;
+    status: "completed";
+    house_view_version_id: null;
+    areas_of_concern_snapshot: string | null;
+    thesis_snapshot: string;
+    synthesized_memo_json: string;
+    error_message: null;
+    started_at: number;
+    finished_at: number;
+  };
+  latestReview: null;
+  objections: never[];
+  threads: never[];
+};
+
+function buildEntry({
+  memoId,
+  runId,
+  t,
+  name,
+  url,
+  founders,
+  stage,
+  sector,
+  geo,
+  checkUsd,
+  postMoneyUsd,
+  thesis,
+  areasOfConcern,
+  synth,
+  status,
+}: {
+  memoId: string;
+  runId: string;
+  t: number;
+  name: string;
+  url: string;
+  founders: string[];
+  stage: "seed" | "series_a" | "series_b";
+  sector: string;
+  geo: string;
+  checkUsd: number;
+  postMoneyUsd: number;
+  thesis: string;
+  areasOfConcern: string;
+  synth: PrivateCompanySynthesizedMemo;
+  status: "draft" | "in_review" | "approved" | "rejected" | "changes_requested";
+}): DemoEntry {
+  return {
+    memo: {
+      id: memoId,
+      entity_type: "private_company",
+      stock_ticker: null,
+      stock_name: null,
+      stock_exchange: null,
+      stock_sector: null,
+      fund_id: null,
+      private_company_name: name,
+      private_company_url: url,
+      private_company_founders_json: JSON.stringify(founders),
+      private_company_round_stage: stage,
+      private_company_check_size_usd: checkUsd,
+      private_company_post_money_usd: postMoneyUsd,
+      private_company_sector: sector,
+      private_company_geo: geo,
+      thesis,
+      areas_of_concern: areasOfConcern,
+      private_peers: null,
+      status,
+      reviewed_by_user_id: null,
+      review_comment: null,
+      created_at: t,
+      updated_at: t + 60_000,
+    },
+    fundName: null,
+    latestRun: {
+      id: runId,
+      memo_id: memoId,
+      status: "completed",
+      house_view_version_id: null,
+      areas_of_concern_snapshot: areasOfConcern,
+      thesis_snapshot: thesis,
+      synthesized_memo_json: JSON.stringify(synth),
+      error_message: null,
+      started_at: t + 30_000,
+      finished_at: t + 50_000,
+    },
+    latestReview: null,
+    objections: [],
+    threads: [],
+  };
+}
+
+const entries: DemoEntry[] = [
+  buildEntry({
+    memoId: MEMO_IDS.seed,
+    runId: RUN_IDS.seed,
+    t: T_SEED,
+    name: "Modular Care",
+    url: "https://modularcare.example",
+    founders: ["Anya Patel", "David Chen"],
+    stage: "seed",
+    sector: "HealthTech",
+    geo: "US",
+    checkUsd: 50_000,
+    postMoneyUsd: 8_000_000,
+    thesis: seedThesis,
+    areasOfConcern: seedAreasOfConcern,
+    synth: seedSynth,
+    status: "in_review",
+  }),
+  buildEntry({
+    memoId: MEMO_IDS.seriesA,
+    runId: RUN_IDS.seriesA,
+    t: T_SERIES_A,
+    name: "Lattice Forge",
+    url: "https://latticeforge.example",
+    founders: ["Marisa Chen", "Ravi Kapoor"],
+    stage: "series_a",
+    sector: "DevTools",
+    geo: "US",
+    checkUsd: 500_000,
+    postMoneyUsd: 40_000_000,
+    thesis: seriesAThesis,
+    areasOfConcern: seriesAAreasOfConcern,
+    synth: seriesASynth,
+    status: "approved",
+  }),
+  buildEntry({
+    memoId: MEMO_IDS.seriesB,
+    runId: RUN_IDS.seriesB,
+    t: T_SERIES_B,
+    name: "Helix Compute",
+    url: "https://helixcompute.example",
+    founders: ["Diana Foster", "Krish Iyer"],
+    stage: "series_b",
+    sector: "AI Infrastructure",
+    geo: "US",
+    checkUsd: 2_000_000,
+    postMoneyUsd: 200_000_000,
+    thesis: seriesBThesis,
+    areasOfConcern: seriesBAreasOfConcern,
+    synth: seriesBSynth,
+    status: "changes_requested",
+  }),
+];
+
+const dest = "./src/lib/db/seed-data/demo-private-company-memos.json";
+mkdirSync(dirname(dest), { recursive: true });
+writeFileSync(dest, JSON.stringify(entries, null, 2));
+console.log(
+  `wrote ${entries.length} private-company demos to ${dest} (${(JSON.stringify(entries).length / 1024).toFixed(1)} KB)`,
+);
